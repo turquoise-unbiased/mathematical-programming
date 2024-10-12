@@ -1,14 +1,35 @@
 ## opt_uninte.R [4.1.2] 2024, Wojciech Lawren, All rights reserved.
 ## Optimizing [p.r.] interval | collision of pseudo-random integers of uniform distribution on interval
+library(parallel)
 
-low <- 10 ^ 2 ; high <- 10 ^ 5 ; size <- 10 ^ 2  # random generator parameters [low:high].size
-LOW <- low    ; HIGH <- high   ; SIZE <- size    # initial random generator parameters [LOW:HIGH].SIZE
+## mode : numeric | typeof : double | str : vector matrix
+LOW <- 1e2 ; HIGH <- 1e5 ; SIZE <- 1e2  # initial random generator parameters [LOW:HIGH].SIZE
 
-LOOP     <- 3      # for seq(LOOP) ^ 3
-PRINT_MS <- TRUE   # print score on terminal
-SAVE_MS  <- FALSE  # save score to file
+n    <- 3  # trials n ^ 3
+SHOW <- T  # print score on terminal
+SAVE <- F  # save score to file
 
-orbit = function(size, low, high) {
+cc <- detectCores()    # number of CPU cores >=1 nodes involved in simulation
+ff <- cumprod(seq(n))  # cumulative product vector 1:n series coefficient
+
+pc = function(i) {
+  switch(i[1],
+    rep(ff * SIZE, times = n ^ 2),               # n*n^2
+    rep(ff * LOW, each = n, times = n),          # n*n*n
+    rep(ff * HIGH, each = n ^ 2))                # n^2*n
+}
+
+parameters = function() {
+  cl = makeForkCluster(3)                        # cluster of processes
+  on.exit(stopCluster(cl))
+
+  P <- matrix(seq(3), nrow = 1, ncol = 3)        # parameter matrix
+  parApply(cl, P, 2, function(i) pc(i))          # parallel apply
+}
+
+orbit = function(r) {
+  size <- r[1] ; low <- r[2] ; high <- r[3]
+
   vec <- round(runif(size, low, high))           # random integers vector
   meq <- abs(diff(vec, lag = 1))                 # neighbors distance vector |i,j|
 
@@ -21,21 +42,15 @@ orbit = function(size, low, high) {
   round(c(low, high, size, meq_men, meq_med, meq_mad, vec_col, meq_col))
 }
 
-ms <- matrix(nrow = LOOP ^ 3, ncol = 8)  # score matrix
-colnames(ms) <- c("low", "high", "size", "dist.men", "dist.med", "dist.mad", "coll.rand", "coll.dist")
-idx <- 1  # index
+simulate = function(P) {
+  cl = makeForkCluster(cc)                       # cluster of processes
+  on.exit(stopCluster(cl))
 
-for (i in seq(LOOP)) {
-  high <- high * i
-  low  <- LOW
-  for (j in seq(LOOP)) {
-    low  <- low * j
-    size <- SIZE
-    for (k in seq(LOOP)) {
-      size <- size * k
-      ms[idx,] <- orbit(size, low, high)
-      idx <- idx + 1
-}}}
+  parApply(cl, P, 1, function(r) orbit(r))       # parallel apply
+}
 
-if (PRINT_MS) { print(summary(ms)) ; print(cor(ms)) }
-if (SAVE_MS)  { write.csv(ms, "data.csv") }
+S <- t(simulate(parameters()))                   # score matrix
+colnames(S) <- c("low", "high", "size", "dist.men", "dist.med", "dist.mad", "coll.rand", "coll.dist")
+
+if (SHOW) { print(summary(S)) ; print(cor(S)) }
+if (SAVE) { write.csv(S, "data.csv") }
