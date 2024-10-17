@@ -1,56 +1,62 @@
-## opt_uninte.R [4.1.2] 2024, Wojciech Lawren, All rights reserved.
-## Optimizing [p.r.] interval | collision of pseudo-random integers of uniform distribution on interval
+## opt_uninte.R [4.4.1] 2024, Wojciech Lawren, All rights reserved.
+## Optimizing [p.r.] moment / interval | collision of pseudo-random integers of uniform distribution
 library(parallel)
 
-## mode : numeric | typeof : double | str : vector matrix
-LOW <- 1e2 ; HIGH <- 1e5 ; SIZE <- 1e2  # initial random generator parameters [LOW:HIGH].SIZE
+## mode : numeric | typeof : double | str : array
+a1 <- 1e2 ; b1 <- 1e5 ; l1 <- 1e2  # random generator parameters
+a2 <- 1e3 ; b2 <- 1e5 ; l2 <- 1e3  # random generator parameters
+k  <- 2  # rng sets
 
-n    <- 3  # trials n ^ 3
-SHOW <- T  # print score on terminal
-SAVE <- F  # save score to file
+n    <- 3  # trials n ^ 3 * k
+show <- T  # print score on terminal
+save <- F  # save score to file
 
 cc <- detectCores()    # number of CPU cores >=1 nodes involved in simulation
 ff <- cumprod(seq(n))  # cumulative product vector 1:n series coefficient
 
 pc = function(i) {
   switch(i[1],
-    rep(ff * SIZE, times = n ^ 2),               # n*n^2
-    rep(ff * LOW, each = n, times = n),          # n*n*n
-    rep(ff * HIGH, each = n ^ 2))                # n^2*n
+    rep(ff * l1, times = n ^ 2),                 # n ^ 3
+    rep(ff * a1, each  = n, times = n),
+    rep(ff * b1, each  = n ^ 2),
+    rep(ff * l2, times = n ^ 2),                 # n ^ 3
+    rep(ff * a2, each  = n, times = n),
+    rep(ff * b2, each  = n ^ 2))
 }
 
 parameters = function() {
-  cl = makeForkCluster(3)                        # cluster of processes
+  cl = makeForkCluster(min(k * 3, cc))           # cluster of processes
   on.exit(stopCluster(cl))
 
-  P <- matrix(seq(3), nrow = 1, ncol = 3)        # parameter matrix
-  parApply(cl, P, 2, function(i) pc(i))          # parallel apply
+  P <- array(seq(k * 3), dim = c(1, 3, k))       # parameter array
+  parApply(cl, P, c(2, 3), function(i) pc(i))    # parallel apply
 }
 
 orbit = function(r) {
-  size <- r[1] ; low <- r[2] ; high <- r[3]
+  l <- r[1] ; a <- r[2] ; b <- r[3]
 
-  vec <- round(runif(size, low, high))           # random integers vector
+  vec <- round(runif(l, a, b))                   # random integers vector
   meq <- abs(diff(vec, lag = 1))                 # neighbors distance vector |i,j|
 
   meq_men <- mean(meq)                           # mean distance
   meq_med <- median(meq)                         # median distance
-  meq_mad <- mad(meq, center = meq_med)          # median absolute deviation of distance
+  meq_mad <- mad(meq, center = meq_med, constant = 1) # median absolute deviation of distance
   vec_col <- length(vec) - length(unique(vec))   # integers collision
   meq_col <- length(meq) - length(unique(meq))   # distance collision
 
-  round(c(low, high, size, meq_men, meq_med, meq_mad, vec_col, meq_col))
+  round(c(b - a, l, meq_men, meq_med, meq_mad, vec_col, meq_col))
 }
+
+col.f <- factor(c("intvl", "n.rand", "dist.men", "dist.med", "dist.mad", "coll.rand", "coll.dist"))
 
 simulate = function(P) {
-  cl = makeForkCluster(cc)                       # cluster of processes
+  cl = makeForkCluster(min(n ^ 3 * k, cc))       # cluster of processes
   on.exit(stopCluster(cl))
 
-  parApply(cl, P, 1, function(r) orbit(r))       # parallel apply
+  parApply(cl, P, c(1, 3), function(r) orbit(r)) # parallel apply
 }
 
-S <- t(simulate(parameters()))                   # score matrix
-colnames(S) <- c("low", "high", "size", "dist.men", "dist.med", "dist.mad", "coll.rand", "coll.dist")
+S <- aperm(simulate(parameters()), perm = c(2, 1, 3)) ; colnames(S) <- col.f  # score array
 
-if (SHOW) { print(summary(S)) ; print(cor(S)) }
-if (SAVE) { write.csv(S, "data.csv") }
+if (show) { for (i in seq(k)) { print(summary(S[,,i])) ; print(cor(S[,,i])) }}
+if (save) { write.csv(S, "data.csv") }
