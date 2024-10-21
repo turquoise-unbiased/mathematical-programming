@@ -38,45 +38,48 @@ Lab <- setClass("Lab",
 
 Sim <- setClass("Sim",
                 contains  = c("Lab"),
-                slots     = list(ff = "vector",            # cumulative product vector 1:t series coefficients
-                                 M  = "matrix",            # ff * n|a|b
-                                 P  = "array"),            # parameters array
+                slots     = list(coef = "vector",            # cumulative product vector 1:t series coefficients
+                                 M    = "matrix",            # coef * n|a|b
+                                 A    = "array"),            # parameters array
+                validity  = function(object) {})
+
+Fun <- setClass("Fun",
+                contains  = c("Sim"),
+                slots     = list(.switch = "function",
+                                 orbit   = "function"),
+                prototype = list(
+                  .switch = function(i, s) {                                          # switch Sim parameters
+                    switch(i[1L],
+                      rep(s@coef * sample(s@M[,1L], 1L), times = s@t ^ 2L),              # t ^ 3
+                      rep(s@coef * sample(s@M[,2L], 1L), each  = s@t, times = s@t),
+                      rep(s@coef * sample(s@M[,3L], 1L), each  = s@t ^ 2L))
+                  },
+                  orbit = function(r) {                                                # compute runif stat trial
+                    r.n <- r[1L] ; r.a <- r[2L] ; r.b <- r[3L]
+
+                    ran.v <- round(runif(r.n, r.a, r.b))                               # random integers vector
+                    v.dif <- abs(diff(ran.v, lag = 1L))                                # neighbors distance vector |i,j|
+
+                    d.men <- mean(v.dif)                                               # mean distance
+                    d.med <- median(v.dif)                                             # median distance
+                    d.mad <- mad(v.dif, center = d.med, constant = 1L)                 # median absolute deviation of distance
+                    ran.c <- length(ran.v) - length(unique(ran.v))                     # integers collision
+                    dif.c <- length(v.dif) - length(unique(v.dif))                     # distance collision
+
+                    round(c(r.b - r.a, r.n, d.men, d.med, d.mad, ran.c, dif.c))
+                  }
+                ),
                 validity  = function(object) {})
 
 ## Methods ##
 
 setMethod("initialize", signature = c("Sim"),                                  # initialize Sim slots
           definition = function(.Object, ...) {
-            .Object    <- callNextMethod(.Object, ...)
-            .Object@ff <- cumprod(seq(.Object@t))
-            .Object@M  <- matrix(c(.Object@ff * .Object@n, .Object@ff * .Object@a,
-              .Object@ff * .Object@b), ncol = 3L)
-            .Object@P  <- array(rep(seq(3L), times = .Object@k), dim = c(1L, 3L, .Object@k))
+            .Object      <- callNextMethod(.Object, ...)
+            .Object@coef <- cumprod(seq(.Object@t))
+            .Object@M    <- matrix(c(.Object@coef * .Object@n,
+                                     .Object@coef * .Object@a,
+                                     .Object@coef * .Object@b), ncol = 3L)
+            .Object@A    <- array(rep(seq(3L), times = .Object@k), dim = c(1L, 3L, .Object@k))
             .Object
-          })
-
-setGeneric("p.switch", def = function(i, m) standardGeneric("p.switch"))       # switch parameters sets
-setMethod("p.switch", signature = c("numeric", "Sim"),
-          definition = function(i, m) {
-            switch(i[1L],
-              rep(m@ff * sample(m@M[,1L], 1L), times = m@t ^ 2L),              # t ^ 3
-              rep(m@ff * sample(m@M[,2L], 1L), each  = m@t, times = m@t),
-              rep(m@ff * sample(m@M[,3L], 1L), each  = m@t ^ 2L))
-          })
-
-setGeneric("orbit", def = function(r) standardGeneric("orbit"))                # compute runif stat trial
-setMethod("orbit", signature = c("numeric"),
-          definition = function(r) {
-            r.n <- r[1L] ; r.a <- r[2L] ; r.b <- r[3L]
-
-            ran.v <- round(runif(r.n, r.a, r.b))                               # random integers vector
-            v.dif <- abs(diff(ran.v, lag = 1L))                                # neighbors distance vector |i,j|
-
-            d.men <- mean(v.dif)                                               # mean distance
-            d.med <- median(v.dif)                                             # median distance
-            d.mad <- mad(v.dif, center = d.med, constant = 1L)                 # median absolute deviation of distance
-            ran.c <- length(ran.v) - length(unique(ran.v))                     # integers collision
-            dif.c <- length(v.dif) - length(unique(v.dif))                     # distance collision
-
-            round(c(r.b - r.a, r.n, d.men, d.med, d.mad, ran.c, dif.c))
           })
