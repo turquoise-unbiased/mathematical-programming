@@ -24,14 +24,14 @@ Col <- setClass("Col",
 
 Lab <- setClass("Lab",
                 contains  = c("Log", "Col"),
-                slots     = list(n = "numeric",            # runif n
-                                 a = "numeric",            # runif min
-                                 b = "numeric",            # runif max
-                                 t = "numeric",            # trials t ^ 3 * k
-                                 k = "numeric"),           # score array dim 3
-                prototype = list(n = 1e2,
-                                 a = 1e2,
-                                 b = 1e5,
+                slots     = list(n = "integer",            # runif n
+                                 a = "integer",            # runif min
+                                 b = "integer",            # runif max
+                                 t = "integer",            # trials t ^ 3 * k
+                                 k = "integer"),           # score array dim 3
+                prototype = list(n = as(1e3, "integer"),
+                                 a = as(1e3, "integer"),
+                                 b = as(1e6, "integer"),
                                  t = 3L,
                                  k = 2L),
                 validity  = function(object) {})
@@ -39,8 +39,7 @@ Lab <- setClass("Lab",
 Sim <- setClass("Sim",
                 contains  = c("Lab"),
                 slots     = list(ff = "vector",            # cumulative product vector 1:t series coefficients
-                                 M  = "matrix",            # ff * n|a|b
-                                 P  = "array"),            # parameters array
+                                 A  = "array"),            # parameters array
                 validity  = function(object) {})
 
 ## Methods ##
@@ -49,19 +48,25 @@ setMethod("initialize", signature = c("Sim"),                                  #
           definition = function(.Object, ...) {
             .Object    <- callNextMethod(.Object, ...)
             .Object@ff <- cumprod(seq(.Object@t))
-            .Object@M  <- matrix(c(.Object@ff * .Object@n, .Object@ff * .Object@a,
-              .Object@ff * .Object@b), ncol = 3L)
-            .Object@P  <- array(rep(seq(3L), times = .Object@k), dim = c(1L, 3L, .Object@k))
+            .Object@A  <- array(rep(seq(3L), times = .Object@k), dim = c(1L, 3L, .Object@k))
             .Object
           })
 
-setGeneric("p.switch", def = function(i, m) standardGeneric("p.switch"))       # switch parameters sets
-setMethod("p.switch", signature = c("numeric", "Sim"),
-          definition = function(i, m) {
-            switch(i[1L],
-              rep(m@ff * sample(m@M[,1L], 1L), times = m@t ^ 2L),              # t ^ 3
-              rep(m@ff * sample(m@M[,2L], 1L), each  = m@t, times = m@t),
-              rep(m@ff * sample(m@M[,3L], 1L), each  = m@t ^ 2L))
+setGeneric("v.switch", def = function(r, m) standardGeneric("v.switch"))       # switch parameters sets
+setMethod("v.switch", signature = c("numeric", "Sim"),
+          definition = function(r, m) {
+            switch(r[1L],
+              rep(m@ff * rbinom(1L, m@n, runif(1L, 2e-1)), times = m@t ^ 2L),              # t ^ 3
+              rep(m@ff * rbinom(1L, m@a, runif(1L, 2e-1)), each  = m@t, times = m@t),
+              rep(m@ff * rbinom(1L, m@b, runif(1L, 2e-1)), each  = m@t ^ 2L))
+          })
+
+setMethod("v.switch", signature = c("numeric"),
+          definition = function(r) {
+            switch(r[1L],
+              rep(m@ff * rbinom(1L, m@n, runif(1L, 2e-1)), times = m@t ^ 2L),              # t ^ 3
+              rep(m@ff * rbinom(1L, m@a, runif(1L, 2e-1)), each  = m@t, times = m@t),
+              rep(m@ff * rbinom(1L, m@b, runif(1L, 2e-1)), each  = m@t ^ 2L))
           })
 
 setGeneric("orbit", def = function(r) standardGeneric("orbit"))                # compute runif stat trial
@@ -69,7 +74,7 @@ setMethod("orbit", signature = c("numeric"),
           definition = function(r) {
             r.n <- r[1L] ; r.a <- r[2L] ; r.b <- r[3L]
 
-            ran.v <- round(runif(r.n, r.a, r.b))                               # random integers vector
+            ran.v <- round(runif(r.n, r.a, r.b), 0L)                               # random integers vector
             v.dif <- abs(diff(ran.v, lag = 1L))                                # neighbors distance vector |i,j|
 
             d.men <- mean(v.dif)                                               # mean distance
@@ -78,5 +83,5 @@ setMethod("orbit", signature = c("numeric"),
             ran.c <- length(ran.v) - length(unique(ran.v))                     # integers collision
             dif.c <- length(v.dif) - length(unique(v.dif))                     # distance collision
 
-            round(c(r.b - r.a, r.n, d.men, d.med, d.mad, ran.c, dif.c))
+            round(c(r.b - r.a, r.n, d.men, d.med, d.mad, ran.c, dif.c), 3L)
           })
