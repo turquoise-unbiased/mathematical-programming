@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <execution>
 #include <functional>
 #include <iostream>
@@ -47,7 +48,7 @@ int main() {
 
   t[6L] = tick_count::now();
   std::transform(std::execution::par, v.cbegin(), v.cend(), v.begin(),
-                 [=](const auto &elem) { return std::abs(elem - v_median); });
+                 [=](const auto &elem) { return std::fabs(elem - v_median); });
   t[7L] = tick_count::now();
 
   t[8L] = tick_count::now();
