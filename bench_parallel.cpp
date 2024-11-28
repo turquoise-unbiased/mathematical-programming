@@ -11,6 +11,7 @@
 #include <iterator>
 #include <numeric>
 #include <random>
+#include <shared_mutex>
 #include <vector>
 
 #define N 100000L
@@ -22,9 +23,10 @@ int main() {
   auto f1 = [=](const tick_count t0, const tick_count t1) { return  ((t1 - t0).count() / 1e+03); };
   auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
   // random number generator
-  std::default_random_engine generator;
+  std::shared_mutex m;
+  std::default_random_engine generator(37L);
   std::uniform_real_distribution<double> distribution(1L, (N >> 1L));
-  std::function<double()> roller = [&]() { return distribution(generator); };
+  std::function<double()> roller = [&]() { std::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
   std::vector<double> v(((N & 1L) ? N : (N | 1L)));
   // parallel transform roller
