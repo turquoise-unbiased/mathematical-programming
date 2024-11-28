@@ -7,15 +7,20 @@ source("cls_uninte.R")
 assign("m", new("Sim"), envir = ( e.sim <- new.env() ))  # object class Sim
 
 parameters <- function() {
-  cl <- parallel::makeForkCluster(min((3L * m@k), .cc))                       # cluster of processes
+  nodes <- min((3L * m@k), .cc)
+  seeds <- seq(from = 37L, by = 337L, length = nodes)
+  cl <- parallel::makeForkCluster(nodes)                       # cluster of processes
   on.exit(parallel::stopCluster(cl))
-  # parallel::clusterEvalQ(cl, attach(e.sim, pos = 2L))
+  parallel::clusterApply(cl, seeds, function(r) set.seed(r))  # cycle of pseudo-random numbers
   parallel::parApply(cl, eval(m@A), c(2L, 3L), function(r) v.switch(r))      # parallel apply
 }
 
 simulate <- function(P) {
-  cl <- parallel::makeForkCluster(min((m@t ^ 3L * m@k), .cc))                 # cluster of processes
+  nodes <- min((m@t ^ 3L * m@k), .cc)
+  seeds <- seq(from = 59L, by = 157L, length = nodes)
+  cl <- parallel::makeForkCluster(nodes)                 # cluster of processes
   on.exit(parallel::stopCluster(cl))
+  parallel::clusterApply(cl, seeds, function(r) set.seed(r))  # cycle of pseudo-random numbers
   parallel::parApply(cl, P, c(1L, 3L), function(r) orbit(r))              # parallel apply
 }
 
