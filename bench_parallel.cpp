@@ -14,12 +14,12 @@
 #include <shared_mutex>
 #include <vector>
 
-#define N 100000L
+constexpr auto N = 100000L;
 using namespace oneapi::tbb;
 
 int main() {
   // diagnostic
-  std::array<tick_count, 10L> t;
+  static std::array<tick_count, 10L> t;
   auto f1 = [=](const tick_count t0, const tick_count t1) { return  ((t1 - t0).count() / 1e+03); };
   auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
   // random number generator
