@@ -1,5 +1,5 @@
 /* 2024, Wojciech Lawren, All rights reserved.
-   benchmark parallel algorithms c++17 & lambdas c++11 */
+   benchmark parallel algorithms c++17 c++20 & lambdas c++11 */
 #include <oneapi/tbb.h>
 
 #include <algorithm>
@@ -11,7 +11,7 @@
 #include <iterator>
 #include <numeric>
 #include <random>
-#include <shared_mutex>
+#include <span>
 #include <vector>
 
 constexpr auto N = 100000L;
@@ -23,10 +23,11 @@ int main() {
   auto f1 = [=](const tick_count t0, const tick_count t1) { return  ((t1 - t0).count() / 1e+03); };
   auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
   // random number generator
-  std::shared_mutex m;
+  speculative_spin_mutex m;
   std::default_random_engine generator(37L);
   std::uniform_real_distribution<double> distribution(1L, (N >> 1L));
-  std::function<double()> roller = [&]() { std::scoped_lock lock_shared(m); return distribution(generator); };
+  std::function<double()> roller = [&]() {
+    speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
   std::vector<double> v(((N & 1L) ? N : (N | 1L)));
   // parallel generate roller
@@ -42,18 +43,17 @@ int main() {
   const auto v_mean = v_sum / static_cast<double>(v.size());
 
   t[4L] = tick_count::now();
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  parallel_sort(std::span<double>(v));
   t[5L] = tick_count::now();
 
   const auto v_median = v.at((v.size() / 2L));
 
   t[6L] = tick_count::now();
-  std::transform(std::execution::par, v.cbegin(), v.cend(), v.begin(),
-                 [=](const auto &elem) { return std::fabs(elem - v_median); });
+  parallel_for_each(v, [=](auto &elem) { elem = std::fabs(elem - v_median); });
   t[7L] = tick_count::now();
 
   t[8L] = tick_count::now();
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  parallel_sort(std::span<double>(v));
   t[9L] = tick_count::now();
 
   const auto v_mad = v.at((v.size() / 2L));
@@ -62,9 +62,9 @@ int main() {
   println( "A) trial size (double) [el]:        ", v.size()                );
   println( "1) parallel generate   [us]:        ", f1(t[0L], t[1L])        );
   println( "2) parallel reduce     [us]:        ", f1(t[2L], t[3L])        );
-  println( "3) parallel stable_sort[us]:        ", f1(t[4L], t[5L])        );
-  println( "4) parallel transform  [us]:        ", f1(t[6L], t[7L])        );
-  println( "5) parallel stable_sort[us]:        ", f1(t[8L], t[9L])        );
+  println( "3) parallel_sort       [us]:        ", f1(t[4L], t[5L])        );
+  println( "4) parallel_for_each   [us]:        ", f1(t[6L], t[7L])        );
+  println( "5) parallel_sort       [us]:        ", f1(t[8L], t[9L])        );
   println( "1) sum: sum(v)                      ", v_sum                   );
   println( "2) mean: sum/size(v)                ", v_mean                  );
   println( "3) median: sort(v)[size(v)/2]       ", v_median                );
