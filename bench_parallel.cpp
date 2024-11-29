@@ -42,7 +42,7 @@ int main() {
   const auto v_mean = v_sum / static_cast<double>(v.size());
 
   t[4L] = tick_count::now();
-  std::sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end());
   t[5L] = tick_count::now();
 
   const auto v_median = v.at((v.size() / 2L));
@@ -53,7 +53,7 @@ int main() {
   t[7L] = tick_count::now();
 
   t[8L] = tick_count::now();
-  std::sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end());
   t[9L] = tick_count::now();
 
   const auto v_mad = v.at((v.size() / 2L));
@@ -62,9 +62,9 @@ int main() {
   println( "A) trial size (double) [el]:        ", v.size()                );
   println( "1) parallel generate   [us]:        ", f1(t[0L], t[1L])        );
   println( "2) parallel reduce     [us]:        ", f1(t[2L], t[3L])        );
-  println( "3) parallel sort       [us]:        ", f1(t[4L], t[5L])        );
+  println( "3) parallel stable_sort[us]:        ", f1(t[4L], t[5L])        );
   println( "4) parallel transform  [us]:        ", f1(t[6L], t[7L])        );
-  println( "5) parallel sort       [us]:        ", f1(t[8L], t[9L])        );
+  println( "5) parallel stable_sort[us]:        ", f1(t[8L], t[9L])        );
   println( "1) sum: sum(v)                      ", v_sum                   );
   println( "2) mean: sum/size(v)                ", v_mean                  );
   println( "3) median: sort(v)[size(v)/2]       ", v_median                );
