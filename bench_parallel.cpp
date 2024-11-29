@@ -29,10 +29,9 @@ int main() {
   std::function<double()> roller = [&]() { std::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
   std::vector<double> v(((N & 1L) ? N : (N | 1L)));
-  // parallel transform roller
+  // parallel generate roller
   t[0L] = tick_count::now();
-  std::transform(std::execution::par, v.cbegin(), v.cend(), v.begin(),
-                 [&](const auto &elem) { return roller(); });
+  std::generate(std::execution::par, v.begin(), v.end(), roller);
   t[1L] = tick_count::now();
 
   // sum, mean, median, mad
@@ -61,7 +60,7 @@ int main() {
 
   // print stats
   println( "A) trial size (double) [el]:        ", v.size()                );
-  println( "1) parallel transform  [us]:        ", f1(t[0L], t[1L])        );
+  println( "1) parallel generate   [us]:        ", f1(t[0L], t[1L])        );
   println( "2) parallel reduce     [us]:        ", f1(t[2L], t[3L])        );
   println( "3) parallel sort       [us]:        ", f1(t[4L], t[5L])        );
   println( "4) parallel transform  [us]:        ", f1(t[6L], t[7L])        );
