@@ -8,7 +8,6 @@
 #include <execution>
 #include <functional>
 #include <iostream>
-#include <iterator>
 #include <numeric>
 #include <random>
 #include <span>
@@ -29,7 +28,8 @@ void fn() {
   std::function<double()> roller = [&]() {
     speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
-  std::vector<double> v(((N & 1L) ? N : (N | 1L)));
+  std::vector<double> vd((N & 1L) ? N : (N | 1L));
+  const auto v = std::span<double>(vd);
   // parallel generate roller
   t[0L] = tick_count::now();
   std::generate(std::execution::par, v.begin(), v.end(), roller);
@@ -37,26 +37,26 @@ void fn() {
 
   // sum, mean, median, mad
   t[2L] = tick_count::now();
-  const auto v_sum = std::reduce(std::execution::par, v.cbegin(), v.cend());
+  const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end());
   t[3L] = tick_count::now();
 
   const auto v_mean = v_sum / static_cast<double>(v.size());
 
   t[4L] = tick_count::now();
-  parallel_sort(std::span<double>(v));
+  parallel_sort(v);
   t[5L] = tick_count::now();
 
-  const auto v_median = v.at((v.size() / 2L));
+  const auto v_median = v[(v.size() / 2L)];
 
   t[6L] = tick_count::now();
   parallel_for_each(v, [=](auto &elem) { elem = std::fabs(elem - v_median); });
   t[7L] = tick_count::now();
 
   t[8L] = tick_count::now();
-  parallel_sort(std::span<double>(v));
+  parallel_sort(v);
   t[9L] = tick_count::now();
 
-  const auto v_mad = v.at((v.size() / 2L));
+  const auto v_mad = v[(v.size() / 2L)];
 
   // print stats
   println( "A) trial size (double) [el]:        ", v.size()                );
