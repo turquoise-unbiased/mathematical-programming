@@ -17,7 +17,7 @@
 constexpr auto N = 100000L;
 using namespace oneapi::tbb;
 
-int main() {
+void fn() {
   // diagnostic
   static std::array<tick_count, 10L> t;
   auto f1 = [=](const tick_count t0, const tick_count t1) { return  ((t1 - t0).count() / 1e+03); };
@@ -69,6 +69,10 @@ int main() {
   println( "2) mean: sum/size(v)                ", v_mean                  );
   println( "3) median: sort(v)[size(v)/2]       ", v_median                );
   println( "4) mad: sort(v-median)[size(v)/2]   ", v_mad                   );
+}
+
+int main() {
+  parallel_invoke(fn, [](){});
   // 0 = OK
   return 0L;
 }
