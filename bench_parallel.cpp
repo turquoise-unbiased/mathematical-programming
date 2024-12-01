@@ -19,16 +19,16 @@ using namespace oneapi::tbb;
 void fn() {
   // diagnostic
   static std::array<tick_count, 10L> t;
-  auto f1 = [=](const tick_count t0, const tick_count t1) { return  ((t1 - t0).count() / 1e+03); };
-  auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
+  constexpr auto f1 = [=](const tick_count t0, const tick_count t1) { return ((t1 - t0).count() / 1e+03); };
+  constexpr auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
   // random number generator
   speculative_spin_mutex m;
-  std::default_random_engine generator(37L);
-  std::uniform_real_distribution<double> distribution(1L, (N >> 1L));
+  std::default_random_engine generator(37u);
+  std::uniform_real_distribution<double> distribution(1e0, (N / 2e0));
   std::function<double()> roller = [&]() {
     speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
-  std::vector<double> vd((N & 1L) ? N : (N | 1L));
+  std::vector<double> vd((N | 1L));
   const auto v = std::span<double>(vd);
   // parallel generate roller
   t[0L] = tick_count::now();
@@ -40,7 +40,7 @@ void fn() {
   const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end());
   t[3L] = tick_count::now();
 
-  const auto v_mean = v_sum / static_cast<double>(v.size());
+  const auto v_mean = v_sum / v.size();
 
   t[4L] = tick_count::now();
   parallel_sort(v);
@@ -49,7 +49,7 @@ void fn() {
   const auto v_median = v[(v.size() / 2L)];
 
   t[6L] = tick_count::now();
-  parallel_for_each(v, [=](auto &elem) { elem = std::fabs(elem - v_median); });
+  parallel_for_each(v, [=](auto &elem) { elem = abs(elem - v_median); });
   t[7L] = tick_count::now();
 
   t[8L] = tick_count::now();
@@ -73,6 +73,5 @@ void fn() {
 
 int main() {
   parallel_invoke(fn, [](){});
-  // 0 = OK
-  return 0L;
+  return 0;
 }
