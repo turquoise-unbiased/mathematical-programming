@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cfloat>
 #include <cmath>
 #include <execution>
 #include <functional>
@@ -59,7 +60,7 @@ void fn() {
   const auto v_mad = v[(v.size() / 2L)];
 
   // print stats
-  println( "A) trial size (double) [el]:        ", v.size()                );
+  println( "A) trial size (ff)     [el]:        ", v.size()                );
   println( "1) parallel generate   [us]:        ", f1(t[0L], t[1L])        );
   println( "2) parallel reduce     [us]:        ", f1(t[2L], t[3L])        );
   println( "3) parallel_sort       [us]:        ", f1(t[4L], t[5L])        );
@@ -69,6 +70,11 @@ void fn() {
   println( "2) mean: sum/size(v)                ", v_mean                  );
   println( "3) median: sort(v)[size(v)/2]       ", v_median                );
   println( "4) mad: sort(v-median)[size(v)/2]   ", v_mad                   );
+  // implementation-dependent arithmetic types
+  println( "a) Machine epsilon (f):             ", FLT_EPSILON             );
+  println( "b) Machine epsilon (ff):            ", DBL_EPSILON             );
+  println( "c) Machine epsilon (fff):           ", LDBL_EPSILON            );
+  println( "d) Machine rounds:                  ", FLT_ROUNDS              );
 }
 
 int main() {
