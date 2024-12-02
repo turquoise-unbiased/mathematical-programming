@@ -1,16 +1,13 @@
 /* 2024, Wojciech Lawren, All rights reserved.
-   benchmark parallel algorithms c++17 c++20 & lambdas c++11 */
+   benchmark parallel algorithms c++17 & lambdas c++11 */
 #include <oneapi/tbb.h>
 
-#include <array>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <functional>
 #include <numeric>
 #include <random>
-#include <span>
-#include <vector>
 
 typedef double F;  // float, double, long double
 constexpr auto N = 100000L;
@@ -18,7 +15,7 @@ using namespace oneapi::tbb;
 
 void fn() {
   // diagnostic
-  static std::array<tick_count, 10L> t;
+  static concurrent_vector<tick_count> t(10L);
   constexpr auto f1 = [=](const tick_count t0, const tick_count t1) { return ((t1 - t0).count() / 1e+03); };
   // random number generator
   speculative_spin_mutex m;
@@ -27,9 +24,7 @@ void fn() {
   std::function<F()> roller = [&]() {
     speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
-  std::vector<F> vd((N | 1L));
-  const auto v = std::span<F>(vd);
-  typedef decltype(v)::iterator R;
+  concurrent_vector<F> v((N | 1L));
   // parallel roller for_each
   t[0L] = tick_count::now();
   parallel_for_each(v, [&](auto &elem) { elem = roller(); });
@@ -37,13 +32,10 @@ void fn() {
 
   // sum, mean, median, mad
   t[2L] = tick_count::now();
-  const auto v_sum = parallel_reduce(
-    blocked_range<R>(v.begin(), v.end()),
-    0e0,
-    [&](blocked_range<R> &r, F partial_sum) {
+  const auto v_sum = parallel_reduce(v.range(), 0e0,
+    [&](decltype(v)::range_type &r, F partial_sum) {
       return std::accumulate(r.begin(), r.end(), partial_sum);
-    },
-    std::plus<F>());
+    }, std::plus<F>());
   t[3L] = tick_count::now();
 
   const auto v_mean = v_sum / v.size();
