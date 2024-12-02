@@ -1,38 +1,40 @@
 /* 2024, Wojciech Lawren, All rights reserved.
-   benchmark parallel algorithms c++17 c++20 & lambdas c++11 */
+   benchmark parallel algorithms c++17 & lambdas c++11 */
 #include <oneapi/tbb.h>
+#include <oneapi/mkl/rng.hpp>
+#include <sycl/sycl.hpp>
 
 #include <array>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
-#include <functional>
 #include <numeric>
-#include <random>
-#include <span>
 #include <vector>
 
 typedef double F;  // float, double, long double
 constexpr auto N = 100000L;
+constexpr auto SEED = 37u;
 using namespace oneapi::tbb;
+using namespace oneapi::mkl;
 
 void fn() {
+  // container vector
+  sycl::queue queue;  // {sycl::default_selector_v};
+  std::vector<F> vd((N | 1L));
+  const auto v = sycl::span<F>(vd);
+  typedef decltype(v)::iterator R;
+  // random number generator
+  rng::default_engine engine(queue, SEED);
+  rng::uniform<F> distr(1e0, (N / 2e0));
   // diagnostic
   static std::array<tick_count, 10L> t;
   constexpr auto f1 = [=](const tick_count t0, const tick_count t1) { return ((t1 - t0).count() / 1e+03); };
-  // random number generator
-  speculative_spin_mutex m;
-  std::default_random_engine generator(37u);
-  std::uniform_real_distribution<F> distribution(1e0, (N / 2e0));
-  std::function<F()> roller = [&]() {
-    speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
-  // container vector
-  std::vector<F> vd((N | 1L));
-  const auto v = std::span<F>(vd);
-  typedef decltype(v)::iterator R;
-  // parallel roller for_each
+  // parallel generate
   t[0L] = tick_count::now();
-  parallel_for_each(v, [&](auto &elem) { elem = roller(); });
+  {
+    sycl::buffer<F, 1> r_buf(v.data(), v.size());
+    rng::generate(distr, engine, v.size(), r_buf);
+  }
   t[1L] = tick_count::now();
 
   // sum, mean, median, mad
@@ -66,7 +68,7 @@ void fn() {
 
   // print stats
   printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
-  printf( "1) parallel_for_each   [us]:          %.3f\n", f1(t[0L], t[1L])               );
+  printf( "1) parallel generate   [us]:          %.3f\n", f1(t[0L], t[1L])               );
   printf( "2) parallel_reduce     [us]:          %.3f\n", f1(t[2L], t[3L])               );
   printf( "3) parallel_sort       [us]:          %.3f\n", f1(t[4L], t[5L])               );
   printf( "4) parallel_for_each   [us]:          %.3f\n", f1(t[6L], t[7L])               );
@@ -80,13 +82,9 @@ void fn() {
   printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
   printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
   printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
-  // TBB info
-  printf( "A) TBB default concurrency:           %i\n", info::default_concurrency()      );
 }
 
 int main() {
-  task_scheduler_handle handle{attach{}};  // reference to the task scheduler
   parallel_invoke(fn, [](){});  // evaluates functions in parallel in bound context
-  finalize(handle);  // blocks until threads completed
   return 0;
 }
