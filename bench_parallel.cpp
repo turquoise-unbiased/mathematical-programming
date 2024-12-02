@@ -75,9 +75,13 @@ void fn() {
   println( "b) Machine epsilon (ff):            ", DBL_EPSILON             );
   println( "c) Machine epsilon (fff):           ", LDBL_EPSILON            );
   println( "d) Machine rounds:                  ", FLT_ROUNDS              );
+  // TBB info
+  println( "A) TBB default concurency:          ", info::default_concurrency()     );
 }
 
 int main() {
-  parallel_invoke(fn, [](){});
+  task_scheduler_handle handle{attach{}};  // reference to the task scheduler
+  parallel_invoke(fn, [](){});  // evaluates functions in parallel in bound context
+  finalize(handle);  // blocks until threads completed
   return 0;
 }
