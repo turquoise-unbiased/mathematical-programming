@@ -8,7 +8,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
-#include <numeric>
+#include <functional>
 #include <vector>
 
 typedef double F;  // float, double, long double
@@ -22,7 +22,6 @@ void fn() {
   sycl::queue queue;  // {sycl::default_selector_v};
   std::vector<F> vd((N | 1L));
   const auto v = sycl::span<F>(vd);
-  typedef decltype(v)::iterator R;
   // random number generator
   rng::default_engine engine(queue, SEED);
   rng::uniform<F> distr(1e0, (N / 2e0));
@@ -40,12 +39,12 @@ void fn() {
   // sum, mean, median, mad
   t[2L] = tick_count::now();
   const auto v_sum = parallel_reduce(
-    blocked_range<R>(v.begin(), v.end()),
-    0e0,
-    [&](blocked_range<R> &r, F partial_sum) {
-      return std::accumulate(r.begin(), r.end(), partial_sum);
-    },
-    std::plus<F>());
+    blocked_range<size_t>(0, v.size()), 0e0,
+    [&](const blocked_range<size_t> &r, F partial_sum) {
+      #pragma nofusion
+      for(size_t i=r.begin(); i!=r.end(); ++i) { partial_sum += v[i]; }
+      return partial_sum;
+    }, std::plus<F>());
   t[3L] = tick_count::now();
 
   const auto v_mean = v_sum / v.size();
