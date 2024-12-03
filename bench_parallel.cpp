@@ -6,9 +6,9 @@
 #include <array>
 #include <cfloat>
 #include <cmath>
+#include <cstdio>
 #include <execution>
 #include <functional>
-#include <iostream>
 #include <numeric>
 #include <random>
 #include <span>
@@ -21,7 +21,6 @@ void fn() {
   // diagnostic
   static std::array<tick_count, 10L> t;
   constexpr auto f1 = [=](const tick_count t0, const tick_count t1) { return ((t1 - t0).count() / 1e+03); };
-  constexpr auto println = [=](const auto rem, const auto score) { std::cout << rem << score << std::endl; };
   // random number generator
   speculative_spin_mutex m;
   std::default_random_engine generator(37u);
@@ -60,21 +59,21 @@ void fn() {
   const auto v_mad = v[(v.size() / 2L)];
 
   // print stats
-  println( "A) trial size (ff)     [el]:        ", v.size()                );
-  println( "1) parallel generate   [us]:        ", f1(t[0L], t[1L])        );
-  println( "2) parallel reduce     [us]:        ", f1(t[2L], t[3L])        );
-  println( "3) parallel_sort       [us]:        ", f1(t[4L], t[5L])        );
-  println( "4) parallel_for_each   [us]:        ", f1(t[6L], t[7L])        );
-  println( "5) parallel_sort       [us]:        ", f1(t[8L], t[9L])        );
-  println( "1) sum: sum(v)                      ", v_sum                   );
-  println( "2) mean: sum/size(v)                ", v_mean                  );
-  println( "3) median: sort(v)[size(v)/2]       ", v_median                );
-  println( "4) mad: sort(v-median)[size(v)/2]   ", v_mad                   );
+  printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
+  printf( "1) parallel generate   [us]:          %.3f\n", f1(t[0L], t[1L])               );
+  printf( "2) parallel reduce     [us]:          %.3f\n", f1(t[2L], t[3L])               );
+  printf( "3) parallel_sort       [us]:          %.3f\n", f1(t[4L], t[5L])               );
+  printf( "4) parallel_for_each   [us]:          %.3f\n", f1(t[6L], t[7L])               );
+  printf( "5) parallel_sort       [us]:          %.3f\n", f1(t[8L], t[9L])               );
+  printf( "1) sum: sum(v)                        %.3f\n", v_sum                          );
+  printf( "2) mean: sum/size(v)                  %.3f\n", v_mean                         );
+  printf( "3) median: sort(v)[size(v)/2]         %.3f\n", v_median                       );
+  printf( "4) mad: sort(v-median)[size(v)/2]     %.3f\n", v_mad                          );
   // implementation-dependent arithmetic types
-  println( "a) Machine epsilon (f):             ", FLT_EPSILON             );
-  println( "b) Machine epsilon (ff):            ", DBL_EPSILON             );
-  println( "c) Machine epsilon (fff):           ", LDBL_EPSILON            );
-  println( "d) Machine rounds:                  ", FLT_ROUNDS              );
+  printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
+  printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
+  printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
+  printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
 }
 
 int main() {
