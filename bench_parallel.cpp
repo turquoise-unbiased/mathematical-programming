@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdio>
 #include <functional>
-#include <numeric>
 #include <random>
 
 typedef double F;  // float, double, long double
@@ -32,9 +31,12 @@ void fn() {
 
   // sum, mean, median, mad
   t[2L] = tick_count::now();
-  const auto v_sum = parallel_reduce(v.range(), 0e0,
-    [&](decltype(v)::range_type &r, F partial_sum) {
-      return std::accumulate(r.begin(), r.end(), partial_sum);
+  const auto v_sum = parallel_reduce(
+    blocked_range<size_t>(0, v.size()), 0e0,
+    [&](const blocked_range<size_t> &r, F partial_sum) {
+      #pragma nofusion
+      for(size_t i=r.begin(); i!=r.end(); ++i) { partial_sum += v[i]; }
+      return partial_sum;
     }, std::plus<F>());
   t[3L] = tick_count::now();
 
