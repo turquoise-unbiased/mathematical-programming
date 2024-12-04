@@ -5,7 +5,6 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
-#include <functional>
 #include <random>
 
 typedef double F;  // float, double, long double
@@ -21,8 +20,7 @@ void fn() {
   speculative_spin_mutex m;
   std::default_random_engine generator(37u);
   std::uniform_real_distribution<F> distribution(1e0, (N / 2e0));
-  std::function<F()> roller = [&]() {
-    speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
+  auto roller = [&]() { speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
   concurrent_vector<F> v((N | 1L));
   typedef decltype(v)::const_iterator R;
@@ -39,7 +37,7 @@ void fn() {
       #pragma nofusion
       for(R k=r.begin(); k!=r.end(); ++k) { partial_sum += *k; }
       return partial_sum;
-    }, std::plus<F>());
+    }, [&](const F &x, const F &y) { return x+y; });
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
