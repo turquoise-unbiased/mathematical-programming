@@ -50,7 +50,7 @@ void fn() {
   const auto v_median = v[(v.size() / 2L)];
 
   t.push(tick_count::now());
-  parallel_for_each(v, [=](auto &elem) { elem = abs(elem - v_median); });
+  parallel_for_each(v, [&](auto &elem) { elem = abs(elem - v_median); });
   t.push(tick_count::now());
 
   t.push(tick_count::now());
