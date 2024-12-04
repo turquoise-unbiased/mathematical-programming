@@ -3,7 +3,6 @@
 #include <oneapi/tbb.h>
 
 #include <algorithm>
-#include <array>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -19,8 +18,9 @@ using namespace oneapi::tbb;
 
 void fn() {
   // diagnostic
-  static std::array<tick_count, 10L> t;
-  constexpr auto f1 = [=](const tick_count t0, const tick_count t1) { return ((t1 - t0).count() / 1e+03); };
+  static tick_count t0, t1;
+  static concurrent_queue<tick_count> t;
+  constexpr auto f1 = [&]() { { t.try_pop(t0); t.try_pop(t1); } return ((t1 - t0).count() / 1e+03); };
   // random number generator
   speculative_spin_mutex m;
   std::default_random_engine generator(37u);
@@ -31,40 +31,40 @@ void fn() {
   std::vector<double> vd((N | 1L));
   const auto v = std::span<double>(vd);
   // parallel generate roller
-  t[0L] = tick_count::now();
+  t.push(tick_count::now());
   std::generate(std::execution::par, v.begin(), v.end(), roller);
-  t[1L] = tick_count::now();
+  t.push(tick_count::now());
 
   // sum, mean, median, mad
-  t[2L] = tick_count::now();
+  t.push(tick_count::now());
   const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end());
-  t[3L] = tick_count::now();
+  t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
 
-  t[4L] = tick_count::now();
+  t.push(tick_count::now());
   parallel_sort(v);
-  t[5L] = tick_count::now();
+  t.push(tick_count::now());
 
   const auto v_median = v[(v.size() / 2L)];
 
-  t[6L] = tick_count::now();
+  t.push(tick_count::now());
   parallel_for_each(v, [=](auto &elem) { elem = abs(elem - v_median); });
-  t[7L] = tick_count::now();
+  t.push(tick_count::now());
 
-  t[8L] = tick_count::now();
+  t.push(tick_count::now());
   parallel_sort(v);
-  t[9L] = tick_count::now();
+  t.push(tick_count::now());
 
   const auto v_mad = v[(v.size() / 2L)];
 
   // print stats
   printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
-  printf( "1) parallel generate   [us]:          %.3f\n", f1(t[0L], t[1L])               );
-  printf( "2) parallel reduce     [us]:          %.3f\n", f1(t[2L], t[3L])               );
-  printf( "3) parallel_sort       [us]:          %.3f\n", f1(t[4L], t[5L])               );
-  printf( "4) parallel_for_each   [us]:          %.3f\n", f1(t[6L], t[7L])               );
-  printf( "5) parallel_sort       [us]:          %.3f\n", f1(t[8L], t[9L])               );
+  printf( "1) parallel_for_each   [us]:          %.3f\n", f1()                           );
+  printf( "2) parallel_reduce     [us]:          %.3f\n", f1()                           );
+  printf( "3) parallel_sort       [us]:          %.3f\n", f1()                           );
+  printf( "4) parallel_for_each   [us]:          %.3f\n", f1()                           );
+  printf( "5) parallel_sort       [us]:          %.3f\n", f1()                           );
   printf( "1) sum: sum(v)                        %.3f\n", v_sum                          );
   printf( "2) mean: sum/size(v)                  %.3f\n", v_mean                         );
   printf( "3) median: sort(v)[size(v)/2]         %.3f\n", v_median                       );
