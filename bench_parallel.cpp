@@ -25,7 +25,7 @@ void fn() {
     speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
   concurrent_vector<F> v((N | 1L));
-  typedef decltype(v)::iterator R;
+  typedef decltype(v)::const_iterator R;
   // parallel roller for_each
   t.push(tick_count::now());
   parallel_for_each(v, [&](auto &elem) { elem = roller(); });
@@ -34,7 +34,7 @@ void fn() {
   // sum, mean, median, mad
   t.push(tick_count::now());
   const auto v_sum = parallel_reduce(
-    v.range(), 0e0,
+    blocked_range<R>(v.cbegin(), v.cend()), 0e0,
     [&](const blocked_range<R> &r, F partial_sum) {
       #pragma nofusion
       for(R k=r.begin(); k!=r.end(); ++k) { partial_sum += *k; }
