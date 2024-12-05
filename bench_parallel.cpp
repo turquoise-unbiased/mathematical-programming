@@ -38,7 +38,7 @@ void fn() {
 
   // sum, mean, median, mad
   t.push(tick_count::now());
-  const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end());
+  const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end(), F(0L), std::plus<F>());
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
