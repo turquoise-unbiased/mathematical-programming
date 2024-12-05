@@ -62,10 +62,10 @@ void fn() {
 
   // print stats
   printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
-  printf( "1) parallel_for_each   [us]:          %.3f\n", f1()                           );
-  printf( "2) parallel_reduce     [us]:          %.3f\n", f1()                           );
+  printf( "1) parallel generate   [us]:          %.3f\n", f1()                           );
+  printf( "2) parallel reduce     [us]:          %.3f\n", f1()                           );
   printf( "3) parallel_sort       [us]:          %.3f\n", f1()                           );
-  printf( "4) parallel_for_each   [us]:          %.3f\n", f1()                           );
+  printf( "4) parallel transform  [us]:          %.3f\n", f1()                           );
   printf( "5) parallel_sort       [us]:          %.3f\n", f1()                           );
   printf( "1) sum: sum(v)                        %.3f\n", v_sum                          );
   printf( "2) mean: sum/size(v)                  %.3f\n", v_mean                         );
