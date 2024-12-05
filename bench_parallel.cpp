@@ -43,7 +43,7 @@ void fn() {
   const auto v_mean = v_sum / v.size();
 
   t.push(tick_count::now());
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end(), std::less<double>());
   t.push(tick_count::now());
 
   const auto v_median = v[(v.size() / 2L)];
@@ -54,7 +54,7 @@ void fn() {
   t.push(tick_count::now());
 
   t.push(tick_count::now());
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end(), std::less<double>());
   t.push(tick_count::now());
 
   const auto v_mad = v[(v.size() / 2L)];
