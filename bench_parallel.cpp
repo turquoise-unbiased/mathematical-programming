@@ -1,6 +1,8 @@
 /* 2024, Wojciech Lawren, All rights reserved.
    benchmark parallel algorithms c++17 c++20 & lambdas c++11 */
 #include <oneapi/tbb.h>
+#define MATHLIB_STANDALONE
+#include <Rmath.h>
 
 #include <algorithm>
 #include <cfloat>
@@ -9,11 +11,9 @@
 #include <execution>
 #include <functional>
 #include <numeric>
-#include <random>
 #include <span>
 #include <vector>
 
-typedef double F;  // float, double, long double
 constexpr auto N = 100000L;
 using namespace oneapi::tbb;
 
@@ -23,14 +23,13 @@ void fn() {
   static concurrent_queue<tick_count> t;
   constexpr auto f1 = [&]() { { t.try_pop(t0); t.try_pop(t1); } return ((t1 - t0).count() / 1e+03); };
   // random number generator
+  set_seed(37u, 59u);
   speculative_spin_mutex m;
-  std::default_random_engine generator(37u);
-  std::uniform_real_distribution<F> distribution(1e0, (N / 2e0));
-  std::function<F()> roller = [&]() {
-    speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
+  auto roller = [&](const double a = 1e0, const double b = (N / 2e0)) {
+    speculative_spin_mutex::scoped_lock lock_shared(m); return runif(a, b); };
   // container vector
-  std::vector<F> vd((N | 1L));
-  const auto v = std::span<F>(vd);
+  std::vector<double> vd((N | 1L));
+  const auto v = std::span<double>(vd);
   // parallel generate roller
   t.push(tick_count::now());
   std::generate(std::execution::par, v.begin(), v.end(), roller);
@@ -38,7 +37,7 @@ void fn() {
 
   // sum, mean, median, mad
   t.push(tick_count::now());
-  const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end(), F(0L), std::plus<F>());
+  const auto v_sum = std::reduce(std::execution::par, v.begin(), v.end(), 0e0, std::plus<double>());
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
