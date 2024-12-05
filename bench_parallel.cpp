@@ -44,7 +44,7 @@ void fn() {
   const auto v_mean = v_sum / v.size();
 
   t.push(tick_count::now());
-  parallel_sort(v);
+  std::stable_sort(std::execution::par, v.begin(), v.end());
   t.push(tick_count::now());
 
   const auto v_median = v[(v.size() / 2L)];
@@ -55,7 +55,7 @@ void fn() {
   t.push(tick_count::now());
 
   t.push(tick_count::now());
-  parallel_sort(v);
+  std::stable_sort(std::execution::par, v.begin(), v.end());
   t.push(tick_count::now());
 
   const auto v_mad = v[(v.size() / 2L)];
@@ -64,9 +64,9 @@ void fn() {
   printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
   printf( "1) parallel generate   [us]:          %.3f\n", f1()                           );
   printf( "2) parallel reduce     [us]:          %.3f\n", f1()                           );
-  printf( "3) parallel_sort       [us]:          %.3f\n", f1()                           );
+  printf( "3) parallel stable_sort[us]:          %.3f\n", f1()                           );
   printf( "4) parallel transform  [us]:          %.3f\n", f1()                           );
-  printf( "5) parallel_sort       [us]:          %.3f\n", f1()                           );
+  printf( "5) parallel stable_sort[us]:          %.3f\n", f1()                           );
   printf( "1) sum: sum(v)                        %.3f\n", v_sum                          );
   printf( "2) mean: sum/size(v)                  %.3f\n", v_mean                         );
   printf( "3) median: sort(v)[size(v)/2]         %.3f\n", v_median                       );
