@@ -13,6 +13,7 @@
 #include <span>
 #include <vector>
 
+typedef double F;  // float, double, long double
 constexpr auto N = 100000L;
 using namespace oneapi::tbb;
 
@@ -24,12 +25,12 @@ void fn() {
   // random number generator
   speculative_spin_mutex m;
   std::default_random_engine generator(37u);
-  std::uniform_real_distribution<double> distribution(1e0, (N / 2e0));
-  std::function<double()> roller = [&]() {
+  std::uniform_real_distribution<F> distribution(1e0, (N / 2e0));
+  std::function<F()> roller = [&]() {
     speculative_spin_mutex::scoped_lock lock_shared(m); return distribution(generator); };
   // container vector
-  std::vector<double> vd((N | 1L));
-  const auto v = std::span<double>(vd);
+  std::vector<F> vd((N | 1L));
+  const auto v = std::span<F>(vd);
   // parallel generate roller
   t.push(tick_count::now());
   std::generate(std::execution::par, v.begin(), v.end(), roller);
