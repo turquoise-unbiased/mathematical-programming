@@ -14,7 +14,7 @@
 #include <span>
 #include <vector>
 
-constexpr auto N = 100000L;
+constexpr auto N = 1'000'000L;
 using namespace oneapi::tbb;
 
 void fn() {
@@ -66,10 +66,10 @@ void fn() {
   printf( "3) parallel stable_sort[us]:          %.3f\n", f1()                           );
   printf( "4) parallel transform  [us]:          %.3f\n", f1()                           );
   printf( "5) parallel stable_sort[us]:          %.3f\n", f1()                           );
-  printf( "1) sum: sum(v)                        %.3f\n", v_sum                          );
-  printf( "2) mean: sum/size(v)                  %.3f\n", v_mean                         );
-  printf( "3) median: sort(v)[size(v)/2]         %.3f\n", v_median                       );
-  printf( "4) mad: sort(v-median)[size(v)/2]     %.3f\n", v_mad                          );
+  printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
+  printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
+  printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
+  printf( "4) mad: sort(v-median)[size(v)/2]     %.11e\n", v_mad                         );
   // implementation-dependent arithmetic types
   printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
   printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
