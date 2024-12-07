@@ -50,7 +50,7 @@ void fn() {
 
   t.push(tick_count::now());
   std::transform(std::execution::par, v.begin(), v.end(), v.begin(),
-                 [&](const auto &elem) { return abs(elem - v_median); });
+                 [&](const auto &elem) { return fabs(elem - v_median); });
   t.push(tick_count::now());
 
   t.push(tick_count::now());
