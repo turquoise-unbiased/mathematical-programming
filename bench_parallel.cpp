@@ -16,6 +16,7 @@
 
 constexpr auto N = 1'000'000L;
 using namespace oneapi::tbb;
+speculative_spin_mutex m;
 
 void fn() {
   // diagnostic
@@ -23,8 +24,6 @@ void fn() {
   static concurrent_queue<tick_count> t;
   constexpr auto f1 = [&]() { { t.try_pop(t0); t.try_pop(t1); } return ((t1 - t0).count() / 1e+03); };
   // random number generator
-  set_seed(37u, 59u);
-  speculative_spin_mutex m;
   auto roller = [&](const double a = 1e0, const double b = (N / 2e0)) {
     speculative_spin_mutex::scoped_lock lock_shared(m); return runif(a, b); };
   // container vector
@@ -78,6 +77,7 @@ void fn() {
 }
 
 int main() {
+  set_seed(37u, 59u);
   parallel_invoke(fn, [](){});
   return 0;
 }
