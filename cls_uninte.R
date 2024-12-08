@@ -74,12 +74,12 @@ setMethod("orbit", sealed = T, signature = c("numeric"),
               ran.v <- floor(runif(r.n, min = r.a, max = r.b))                              # random integers vector
               v.dif <- abs(diff(ran.v, lag = 1L, differences = 1L))                         # neighbors distance vector
 
-              d.men <- mean(v.dif)                                               # mean distance
-              d.med <- median(v.dif)                                             # median distance
-              d.mad <- mad(v.dif, center = d.med, constant = 1L)                # median absolute deviation of distance
-              ran.c <- sum(duplicated(ran.v))                     # integers collision
-              dif.c <- sum(duplicated(v.dif))                     # distance collision
-
-              round(c((r.b - r.a), r.n, d.men, d.med, d.mad, ran.c, dif.c), 3L)
+              c((r.b - r.a),
+                r.n,
+                mean(v.dif),                                               # mean distance
+                ( d.med <- median(v.dif) ),                                            # median distance
+                mad(v.dif, center = d.med, constant = 1L),                # median absolute deviation of distance
+                sum(duplicated(ran.v)),                     # integers collision
+                sum(duplicated(v.dif)))                     # distance collision
             })
           })
