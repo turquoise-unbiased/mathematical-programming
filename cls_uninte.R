@@ -59,9 +59,10 @@ v.switch <- as.function(alist(r =, {                                           #
 }))
 
 orbit <- as.function(alist(r =, {                                              # compute runif stat trial
-  r.n <- r[1L] ; r.a <- r[2L] ; r.b <- r[3L]
+  names(r) <- names(formals(runif))
+  formals(runif) <- ( r <- as.list(r) )
 
-  ran.v <- floor(runif(r.n, min = r.a, max = r.b))                              # random integers vector
+  ran.v <- floor(runif())                              # random integers vector
   v.dif <- abs(diff(ran.v, lag = 1L, differences = 1L))                         # neighbors distance vector
 
   d.men <- mean(v.dif)                                               # mean distance
@@ -70,5 +71,5 @@ orbit <- as.function(alist(r =, {                                              #
   ran.c <- sum(duplicated(ran.v))                     # integers collision
   dif.c <- sum(duplicated(v.dif))                     # distance collision
 
-  round(c((r.b - r.a), r.n, d.men, d.med, d.mad, ran.c, dif.c), 3L)
+  c((r$max - r$min), r$n, d.men, d.med, d.mad, ran.c, dif.c)
 }))
