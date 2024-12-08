@@ -21,15 +21,17 @@ void fn() {
   auto roller = [&]() { return distribution(generator); };
   // container vector
   concurrent_vector<double> v((N | 1L));
+  typedef decltype(v)::iterator R;
+  typedef decltype(v)::const_iterator RC;
   // roller for each
   t.push(tick_count::now());
-  for (size_t i = 0L; i < v.size(); i++) { v[i] = roller(); }
+  for(R k=v.begin(); k!=v.end(); ++k) { *k = roller(); }
   t.push(tick_count::now());
 
   // sum, mean, median, mad
   auto v_sum = 0e0;
   t.push(tick_count::now());
-  for (size_t i = 0L; i < v.size(); i++) { v_sum += v[i]; }
+  for(RC k=v.begin(); k!=v.end(); ++k) { v_sum += *k; }
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
