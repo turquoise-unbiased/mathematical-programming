@@ -23,13 +23,13 @@ void fn() {
   concurrent_vector<double> v((N | 1L));
   // roller for each
   t.push(tick_count::now());
-  for (size_t i = 0L; i < v.size(); i++) { v[i] = roller(); }
+  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = roller(); }
   t.push(tick_count::now());
 
   // sum, mean, median, mad
   auto v_sum = 0e0;
   t.push(tick_count::now());
-  for (size_t i = 0L; i < v.size(); i++) { v_sum += v[i]; }
+  for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
