@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <vector>
 
 constexpr auto N = 1'000'000L;
 using namespace oneapi::tbb;
@@ -20,7 +21,7 @@ void fn() {
   std::uniform_real_distribution<double> distribution(1e0, (N / 2e0));
   auto roller = [&]() { return distribution(generator); };
   // container vector
-  concurrent_vector<double> v((N | 1L));
+  std::vector<double> v((N | 1L));
   // roller for each
   t.push(tick_count::now());
   for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = roller(); }
