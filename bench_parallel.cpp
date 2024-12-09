@@ -13,7 +13,6 @@
 #include <span>
 #include <vector>
 
-typedef double F;  // float, double, long double
 constexpr auto N = 1'000'000L;
 using namespace oneapi::tbb;
 
@@ -24,11 +23,11 @@ void fn() {
   constexpr auto f1 = [&]() { { t.try_pop(t0); t.try_pop(t1); } return ((t1 - t0).count() / 1e+03); };
   // random number generator
   std::default_random_engine generator(37u);
-  std::uniform_real_distribution<F> distribution(1e0, (N / 2e0));
-  std::function<F()> roller = [&]() { return distribution(generator); };
+  std::uniform_real_distribution<double> distribution(1e0, (N / 2e0));
+  auto roller = [&]() { return distribution(generator); };
   // container vector
-  std::vector<F> vd((N | 1L));
-  const auto v = std::span<F>(vd);
+  std::vector<double> vd((N | 1L));
+  const auto v = std::span<double>(vd);
   // parallel generate roller
   t.push(tick_count::now());
   std::generate(std::execution::seq, v.begin(), v.end(), roller);
@@ -36,13 +35,13 @@ void fn() {
 
   // sum, mean, median, mad
   t.push(tick_count::now());
-  const auto v_sum = std::accumulate(v.begin(), v.end(), F(0L));
+  const auto v_sum = std::accumulate(v.begin(), v.end(), 0e0, std::plus<double>());
   t.push(tick_count::now());
 
   const auto v_mean = v_sum / v.size();
 
   t.push(tick_count::now());
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end(), std::less<double>());
   t.push(tick_count::now());
 
   const auto v_median = v[(v.size() / 2L)];
@@ -53,7 +52,7 @@ void fn() {
   t.push(tick_count::now());
 
   t.push(tick_count::now());
-  std::stable_sort(std::execution::par, v.begin(), v.end());
+  std::stable_sort(std::execution::par, v.begin(), v.end(), std::less<double>());
   t.push(tick_count::now());
 
   const auto v_mad = v[(v.size() / 2L)];
