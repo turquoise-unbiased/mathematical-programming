@@ -19,13 +19,12 @@ int fn( void ) {
   // random number generator
   svrng_engine_t engine      = svrng_new_rand_engine(37u);
   svrng_distribution_t distr = svrng_new_uniform_distribution_double(1e0, (N / 2e0));
-  auto roller = [&]() { return svrng_generate_double(engine, distr); };
   // container vector
   std::vector<double> v((N | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
-  // roller for each
+  // double for each
   t.push(tick_count::now());
-  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = roller(); }
+  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = svrng_generate_double(engine, distr); }
   t.push(tick_count::now());
 
   int st = svrng_get_status();
