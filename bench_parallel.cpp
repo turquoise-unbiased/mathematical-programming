@@ -1,10 +1,10 @@
 /* 2024, Wojciech Lawren, All rights reserved.
    benchmark parallel algorithms c++17 & lambdas c++11 */
-#include <oneapi/tbb.h>
+#include <float.h>
+#include <mathimf.h>
 #include <svrng.h>
+#include <oneapi/tbb.h>
 
-#include <cfloat>
-#include <cmath>
 #include <cstdio>
 #include <vector>
 
