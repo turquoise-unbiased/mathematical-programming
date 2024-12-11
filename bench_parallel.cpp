@@ -35,7 +35,7 @@ int fn( void ) {
   for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
   t.push(tick_count::now());
 
-  v_mean = v_sum / v.size();
+  v_mean = (v_sum / v.size());
 
   t.push(tick_count::now());
   parallel_sort(v);
@@ -44,7 +44,7 @@ int fn( void ) {
   v_median = v[(v.size() / 2L)];
 
   t.push(tick_count::now());
-  parallel_for_each(v, [&](auto &elem) { elem = fabs(elem - v_median); });
+  parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
   t.push(tick_count::now());
 
   t.push(tick_count::now());
