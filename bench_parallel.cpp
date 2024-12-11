@@ -4,6 +4,7 @@
 #include <mathimf.h>
 #include <svrng.h>
 #include <oneapi/tbb.h>
+#include <oneapi/tbb/scalable_allocator.h>
 
 #include <cstdio>
 #include <vector>
@@ -20,7 +21,7 @@ int fn( void ) {
   svrng_engine_t engine      = svrng_new_rand_engine(37u);
   svrng_distribution_t distr = svrng_new_uniform_distribution_double(1e0, (N / 2e0));
   // container vector
-  std::vector<double> v((N | 1L));
+  std::vector<double, scalable_allocator<double>> v((N | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
   // double for each
   t.push(tick_count::now());
