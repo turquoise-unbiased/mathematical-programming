@@ -14,9 +14,9 @@ using namespace oneapi::tbb;
 
 int fn( void ) {
   // diagnostic
-  static tick_count t0, t1;
-  static concurrent_queue<tick_count> t;
-  constexpr auto f1 = [&]() { { t.try_pop(t0); t.try_pop(t1); } return ((t1 - t0).count() / 1e+03); };
+  tick_count t0, t1;
+  concurrent_queue<tick_count> t;
+  auto f1 = [&]() { return ((int(t.try_pop(t0)) & int(t.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); };
   // random number generator
   svrng_engine_t engine      = svrng_new_rand_engine(37u);
   svrng_distribution_t distr = svrng_new_uniform_distribution_double(1e0, (N / 2e0));
@@ -55,12 +55,12 @@ int fn( void ) {
   v_mad = v[(v.size() / 2L)];
 
   // print stats
-  printf( "A) trial size (ff)     [el]:          %zu\n",  v.size()                       );
-  printf( "1) for generate        [us]:          %.3f\n", f1()                           );
-  printf( "2) for reduce          [us]:          %.3f\n", f1()                           );
-  printf( "3) parallel_sort       [us]:          %.3f\n", f1()                           );
-  printf( "4) parallel_for_each   [us]:          %.3f\n", f1()                           );
-  printf( "5) parallel_sort       [us]:          %.3f\n", f1()                           );
+  printf( "A) trial size                         %zu double-precision\n", v.size()       );
+  printf( "1) for generate                       %.6fs\n", f1()                          );
+  printf( "2) for reduce                         %.6fs\n", f1()                          );
+  printf( "3) parallel_sort                      %.6fs\n", f1()                          );
+  printf( "4) parallel_for_each                  %.6fs\n", f1()                          );
+  printf( "5) parallel_sort                      %.6fs\n", f1()                          );
   printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
   printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
   printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
