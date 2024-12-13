@@ -16,9 +16,9 @@ template<typename T = tick_count, typename Q = concurrent_queue<T>>
 class bench {
   T t0, t1; Q q;
 public:
-  void push(const T t) { this->q.push(t); }
+  void push(const T t) { this->q.push(t); }  // proxy with private
   double f1() { return ((int(this->q.try_pop(this->t0)) & int(this->q.try_pop(this->t1))) ?
-    (this->t1-this->t0).seconds() : -(0e0)); }
+    (this->t1-this->t0).seconds() : -(0e0)); }  // time span
 };
 
 // trial namespace
@@ -37,31 +37,31 @@ int trial::fn( void ) {
   std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
   // double for each
-  bc.push(tick_count::now());
+  bc.push(tick_count::now());  // 1)
   for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = svrng_generate_double(engine, distr); }
   bc.push(tick_count::now());
 
-  int st = svrng_get_status();
+  int st = svrng_get_status();  // computing or jump according with RNG status
   if(st != SVRNG_STATUS_OK) { printf("RNG FAILED: status error %i\n", st); goto lx; }
 
   // sum, mean, median, mad
-  bc.push(tick_count::now());
+  bc.push(tick_count::now());  // 2)
   for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
   bc.push(tick_count::now());
 
   v_mean = (v_sum / v.size());
 
-  bc.push(tick_count::now());
+  bc.push(tick_count::now());  // 3)
   parallel_sort(v);
   bc.push(tick_count::now());
 
   v_median = v[(v.size() / 2L)];
 
-  bc.push(tick_count::now());
+  bc.push(tick_count::now());  // 4)
   parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
   bc.push(tick_count::now());
 
-  bc.push(tick_count::now());
+  bc.push(tick_count::now());  // 5)
   parallel_sort(v);
   bc.push(tick_count::now());
 
