@@ -9,14 +9,27 @@
 #include <cstdio>
 #include <vector>
 
-namespace trial { const long size = 1'000'000L; }
 using namespace oneapi::tbb;
 
-int fn( void ) {
+// benchmark template class
+template<typename T = tick_count, typename Q = concurrent_queue<T>>
+class bench {
+  T t0, t1; Q q;
+public:
+  void push(const T t) { this->q.push(t); }
+  double f1() { return ((int(this->q.try_pop(this->t0)) & int(this->q.try_pop(this->t1))) ?
+    (this->t1-this->t0).seconds() : -(0e0)); }
+};
+
+// trial namespace
+namespace trial {
+  const long size = 1'000'000L;
+  int fn( void );
+}
+
+int trial::fn( void ) {
   // diagnostic
-  tick_count t0, t1;
-  concurrent_queue<tick_count> t;
-  auto f1 = [&]() { return ((int(t.try_pop(t0)) & int(t.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); };
+  bench bc;
   // random number generator
   svrng_engine_t engine      = svrng_new_rand_engine(37u);
   svrng_distribution_t distr = svrng_new_uniform_distribution_double(1e0, (trial::size / 2e0));
@@ -24,43 +37,43 @@ int fn( void ) {
   std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
   // double for each
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
   for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = svrng_generate_double(engine, distr); }
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
 
   int st = svrng_get_status();
   if(st != SVRNG_STATUS_OK) { printf("RNG FAILED: status error %i\n", st); goto lx; }
 
   // sum, mean, median, mad
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
   for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
 
   v_mean = (v_sum / v.size());
 
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
   parallel_sort(v);
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
 
   v_median = v[(v.size() / 2L)];
 
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
   parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
 
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
   parallel_sort(v);
-  t.push(tick_count::now());
+  bc.push(tick_count::now());
 
   v_mad = v[(v.size() / 2L)];
 
   // print stats
   printf( "A) trial size                         %zu double-precision\n", v.size()       );
-  printf( "1) for generate                       %.6fs\n", f1()                          );
-  printf( "2) for reduce                         %.6fs\n", f1()                          );
-  printf( "3) parallel_sort                      %.6fs\n", f1()                          );
-  printf( "4) parallel_for_each                  %.6fs\n", f1()                          );
-  printf( "5) parallel_sort                      %.6fs\n", f1()                          );
+  printf( "1) for generate                       %.6fs\n", bc.f1()                       );
+  printf( "2) for reduce                         %.6fs\n", bc.f1()                       );
+  printf( "3) parallel_sort                      %.6fs\n", bc.f1()                       );
+  printf( "4) parallel_for_each                  %.6fs\n", bc.f1()                       );
+  printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
   printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
   printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
   printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
@@ -78,6 +91,6 @@ lx:
 }
 
 int main() {
-  parallel_invoke(fn, [](){});
+  parallel_invoke(trial::fn, [](){});
   return 0;
 }
