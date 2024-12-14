@@ -14,24 +14,25 @@ using namespace oneapi::tbb;
 // benchmark template class
 template<typename T = tick_count, typename Q = concurrent_queue<T>>
 class bench {
-  T t0, t1; Q q;
+  T t0, t1;
+  Q q;
 public:
-  virtual void push(const T t) { this->q.push(t); }  // proxy with private
-  virtual double f1() { return ((int(this->q.try_pop(this->t0)) & int(this->q.try_pop(this->t1))) ?
-    (this->t1-this->t0).seconds() : -(0e0)); }  // time span
+  virtual void push(const T t) { q.push(t); }  // proxy with private
+  virtual double f1() {
+    return ((int(q.try_pop(t0)) & int(q.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); }  // time span
 };
 
 // RNG template class
-template<size_t S>
+template<size_t R, unsigned S = 37u>
 class RNG {
   svrng_engine_t engine;
   svrng_distribution_t distr;
 public:
-  RNG() { this->engine = svrng_new_rand_engine(37u);
-    this->distr = svrng_new_uniform_distribution_double(1e0, (S / 2e0)); }
-  ~RNG() { svrng_delete_distribution(this->distr);
-    svrng_delete_engine(this->engine); }
-  double unif() const { return svrng_generate_double(this->engine, this->distr); }  // proxy with private
+  RNG() { engine = svrng_new_rand_engine(S);
+          distr  = svrng_new_uniform_distribution_double(1e0, (R / 2e0)); }
+  ~RNG() { svrng_delete_distribution(distr);
+           svrng_delete_engine(engine); }
+  double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
 };
 
 // trial namespace
