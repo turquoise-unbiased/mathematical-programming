@@ -36,7 +36,10 @@ public:
 
 // trial namespace
 namespace trial {
-  const long size = 1'000'000L;
+  const size_t size = 1'000'000L;       // trial::size
+  enum FUSION         { ON, OFF };      // loop fusion constants
+  const int fusion  = FUSION::OFF;      // loop fusion constant
+  int st            = SVRNG_STATUS_OK;  // RNG status
   int fn( void );
 }
 
@@ -49,18 +52,35 @@ int trial::fn( void ) {
   std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
   // double for each
-  bc.push(tick_count::now());  // 1)
-  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = r.unif(); }
-  bc.push(tick_count::now());
+  switch (fusion) {
+    case FUSION::ON:
+      bc.push(tick_count::now());  // 1&2)
+      for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) {
+        *k = r.unif();
+        v_sum += *k;
+      }
+      bc.push(tick_count::now());
 
-  int st = svrng_get_status();  // computing or jump according with RNG status
+      st = svrng_get_status();
+    break;
+    default:
+      bc.push(tick_count::now());  // 1)
+      for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = r.unif(); }
+      bc.push(tick_count::now());
+
+      st = svrng_get_status();
+      if(st != SVRNG_STATUS_OK) { break; }
+
+      // sum
+      bc.push(tick_count::now());  // 2)
+      for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
+      bc.push(tick_count::now());
+  }
+
+  // computing or jump according with RNG status
   if(st != SVRNG_STATUS_OK) { printf("RNG FAILED: status error %i\n", st); goto lx; }
 
-  // sum, mean, median, mad
-  bc.push(tick_count::now());  // 2)
-  for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
-  bc.push(tick_count::now());
-
+  // mean, median, mad
   v_mean = (v_sum / v.size());
 
   bc.push(tick_count::now());  // 3)
@@ -81,8 +101,12 @@ int trial::fn( void ) {
 
   // print stats
   printf( "A) trial size                         %zu double-precision\n", v.size()       );
+if(fusion == FUSION::ON) {
+  printf( "1&2) for generate [fused reduce]      %.6fs\n", bc.f1()                       );
+}else{
   printf( "1) for generate                       %.6fs\n", bc.f1()                       );
   printf( "2) for reduce                         %.6fs\n", bc.f1()                       );
+}
   printf( "3) parallel_sort                      %.6fs\n", bc.f1()                       );
   printf( "4) parallel_for_each                  %.6fs\n", bc.f1()                       );
   printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
