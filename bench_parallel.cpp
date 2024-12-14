@@ -21,6 +21,19 @@ public:
     (this->t1-this->t0).seconds() : -(0e0)); }  // time span
 };
 
+// RNG template class
+template<size_t S>
+class RNG {
+  svrng_engine_t engine;
+  svrng_distribution_t distr;
+public:
+  RNG() { this->engine = svrng_new_rand_engine(37u);
+    this->distr = svrng_new_uniform_distribution_double(1e0, (S / 2e0)); }
+  ~RNG() { svrng_delete_distribution(this->distr);
+    svrng_delete_engine(this->engine); }
+  double unif() const { return svrng_generate_double(this->engine, this->distr); }  // proxy with private
+};
+
 // trial namespace
 namespace trial {
   const long size = 1'000'000L;
@@ -31,14 +44,13 @@ int trial::fn( void ) {
   // diagnostic
   bench bc;
   // random number generator
-  svrng_engine_t engine      = svrng_new_rand_engine(37u);
-  svrng_distribution_t distr = svrng_new_uniform_distribution_double(1e0, (trial::size / 2e0));
+  RNG<trial::size> r;
   // container vector
   std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
   double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
   // double for each
   bc.push(tick_count::now());  // 1)
-  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = svrng_generate_double(engine, distr); }
+  for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = r.unif(); }
   bc.push(tick_count::now());
 
   int st = svrng_get_status();  // computing or jump according with RNG status
@@ -85,8 +97,6 @@ int trial::fn( void ) {
   printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
 
 lx:
-  svrng_delete_distribution(distr);
-  svrng_delete_engine(engine);
   return st;
 }
 
