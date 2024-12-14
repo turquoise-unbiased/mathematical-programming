@@ -16,8 +16,8 @@ template<typename T = tick_count, typename Q = concurrent_queue<T>>
 class bench {
   T t0, t1; Q q;
 public:
-  void push(const T t) { this->q.push(t); }  // proxy with private
-  double f1() { return ((int(this->q.try_pop(this->t0)) & int(this->q.try_pop(this->t1))) ?
+  virtual void push(const T t) { this->q.push(t); }  // proxy with private
+  virtual double f1() { return ((int(this->q.try_pop(this->t0)) & int(this->q.try_pop(this->t1))) ?
     (this->t1-this->t0).seconds() : -(0e0)); }  // time span
 };
 
