@@ -52,7 +52,7 @@ int trial::fn( void ) {
   RNG<trial::size> r;
   // container vector
   std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
-  double v_sum = 0e0, v_mean = 0e0, v_median = 0e0, v_mad = 0e0;
+  double v_sum = 0e0;
   // double for each
   switch (fusion) {
     case FUSION::ON:
@@ -88,50 +88,52 @@ int trial::fn( void ) {
       bc.push(tick_count::now());
   }
 
-  // computing or jump according with RNG status
-  if(st != SVRNG_STATUS_OK) { printf("RNG FAILED: status error %i\n", st); goto lx; }
-
   // mean, median, mad
-  v_mean = (v_sum / v.size());
+  // computing or jump according with RNG status
+  switch (st) {
+    case (not SVRNG_STATUS_OK):
+      printf("RNG FAILED: status error %i\n", st);
+    break;
+    default:
+      const auto v_mean = (v_sum / v.size());
 
-  bc.push(tick_count::now());  // 3)
-  parallel_sort(v);
-  bc.push(tick_count::now());
+      bc.push(tick_count::now());  // 3)
+      parallel_sort(v);
+      bc.push(tick_count::now());
 
-  v_median = v[(v.size() / 2L)];
+      const auto v_median = v[(v.size() / 2L)];
 
-  bc.push(tick_count::now());  // 4)
-  parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
-  bc.push(tick_count::now());
+      bc.push(tick_count::now());  // 4)
+      parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
+      bc.push(tick_count::now());
 
-  bc.push(tick_count::now());  // 5)
-  parallel_sort(v);
-  bc.push(tick_count::now());
+      bc.push(tick_count::now());  // 5)
+      parallel_sort(v);
+      bc.push(tick_count::now());
 
-  v_mad = v[(v.size() / 2L)];
+      const auto v_mad = v[(v.size() / 2L)];
 
-  // print stats
-  printf( "A) trial size                         %zu double-precision\n", v.size()       );
-if(fusion == FUSION::ON) {
-  printf( "1&2) for generate [fused reduce]      %.6fs\n", bc.f1()                       );
-}else{
-  printf( "1) for generate                       %.6fs\n", bc.f1()                       );
-  printf( "2) for reduce                         %.6fs\n", bc.f1()                       );
-}
-  printf( "3) parallel_sort                      %.6fs\n", bc.f1()                       );
-  printf( "4) parallel_for_each                  %.6fs\n", bc.f1()                       );
-  printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
-  printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
-  printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
-  printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
-  printf( "4) mad: sort(v-median)[size(v)/2]     %.11e\n", v_mad                         );
-  // implementation-dependent arithmetic types
-  printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
-  printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
-  printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
-  printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
-
-lx:
+      // print stats
+      printf( "A) trial size                         %zu double-precision\n", v.size()       );
+    if(fusion == FUSION::ON) {
+      printf( "1&2) for generate [fused reduce]      %.6fs\n", bc.f1()                       );
+    }else{
+      printf( "1) for generate                       %.6fs\n", bc.f1()                       );
+      printf( "2) for reduce                         %.6fs\n", bc.f1()                       );
+    }
+      printf( "3) parallel_sort                      %.6fs\n", bc.f1()                       );
+      printf( "4) parallel_for_each                  %.6fs\n", bc.f1()                       );
+      printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
+      printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
+      printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
+      printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
+      printf( "4) mad: sort(v-median)[size(v)/2]     %.11e\n", v_mad                         );
+      // implementation-dependent arithmetic types
+      printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
+      printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
+      printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
+      printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
+  }
   return st;
 }
 
