@@ -1,6 +1,7 @@
 /* 2024, Wojciech Lawren, All rights reserved.
    benchmark parallel algorithms c++17 & lambdas c++11 */
 #include <float.h>
+#include <fenv.h>
 #include <mathimf.h>
 #include <svrng.h>
 #include <oneapi/tbb.h>
@@ -133,6 +134,7 @@ int trial::fn( void ) {
       printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
       printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
       printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
+      printf( "e) x87 FPU exception flags:           %i\n",  fetestexcept(FE_ALL_EXCEPT)     );
   }
   return st;
 }
