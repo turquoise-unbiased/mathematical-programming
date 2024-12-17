@@ -33,6 +33,7 @@ public:
   ~RNG() { svrng_delete_distribution(distr);
            svrng_delete_engine(engine); }
   double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
+  svrng_double32_t unif32() const { return svrng_generate32_double(engine, distr); }  // proxy with private
 };
 
 // trial namespace
@@ -56,7 +57,7 @@ int trial::fn( void ) {
   switch (fusion) {
     case FUSION::ON:
       bc.push(tick_count::now());  // 1&2)
-      for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) {
+      for(decltype(v)::iterator k = v.begin(); k < v.end(); ++k) {
         *k = r.unif();
         v_sum += *k;
       }
@@ -65,8 +66,17 @@ int trial::fn( void ) {
       st = svrng_get_status();
     break;
     default:
+      const auto rem = (v.size() % 32L);
+      const auto end = (rem ? (v.end() - 32L) : v.end());
+
       bc.push(tick_count::now());  // 1)
-      for(decltype(v)::iterator k = v.begin(); k != v.end(); ++k) { *k = r.unif(); }
+      for(decltype(v)::const_iterator k = v.begin(); k < end; k += 32L) {
+        *((svrng_double32_t*)(&(*k))) = r.unif32();
+      }
+      // remainder
+      for(decltype(v)::iterator k = (v.end() - rem); k < v.end(); ++k) {
+        *k = r.unif();
+      }
       bc.push(tick_count::now());
 
       st = svrng_get_status();
@@ -74,7 +84,7 @@ int trial::fn( void ) {
 
       // sum
       bc.push(tick_count::now());  // 2)
-      for(decltype(v)::const_iterator k = v.begin(); k != v.end(); ++k) { v_sum += *k; }
+      for(decltype(v)::const_iterator k = v.begin(); k < v.end(); ++k) { v_sum += *k; }
       bc.push(tick_count::now());
   }
 
