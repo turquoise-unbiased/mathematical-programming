@@ -42,7 +42,7 @@ namespace trial {
   const size_t size = 1'000'000L;       // trial::size
   enum FUSION         { ON, OFF };      // loop fusion constants
   const int fusion  = FUSION::OFF;      // loop fusion constant
-  int st            = SVRNG_STATUS_OK;  // RNG status
+  volatile int st   = SVRNG_STATUS_OK;  // RNG status
   int fn( void );
 }
 
@@ -80,8 +80,7 @@ int trial::fn( void ) {
       }
       bc.push(tick_count::now());
 
-      st = svrng_get_status();
-      if(st != SVRNG_STATUS_OK) { break; }
+      if(( st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
 
       // sum
       bc.push(tick_count::now());  // 2)
