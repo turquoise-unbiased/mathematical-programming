@@ -125,10 +125,10 @@ int trial::fn(const size_t n) {
       printf( "3) parallel_sort                      %.6fs\n", bc.f1()                       );
       printf( "4) parallel_for_each                  %.6fs\n", bc.f1()                       );
       printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
-      printf( "1) sum: sum(v)                        %.17e\n", v_sum                         );
-      printf( "2) mean: sum/size(v)                  %.11e\n", v_mean                        );
-      printf( "3) median: sort(v)[size(v)/2]         %.11e\n", v_median                      );
-      printf( "4) mad: sort(v-median)[size(v)/2]     %.11e\n", v_mad                         );
+      printf( "1) sum: sum(v)                        %.23e\n", v_sum                         );
+      printf( "2) mean: sum/size(v)                  %.17e\n", v_mean                        );
+      printf( "3) median: sort(v)[size(v)/2]         %.17e\n", v_median                      );
+      printf( "4) mad: sort(v-median)[size(v)/2]     %.17e\n", v_mad                         );
       // implementation-dependent arithmetic types
       printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
       printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
