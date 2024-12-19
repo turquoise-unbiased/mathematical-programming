@@ -38,6 +38,27 @@ public:
   svrng_double32_t unif32() const { return svrng_generate32_double(engine, distr); }  // proxy with private
 };
 
+// median of vector template function
+template<typename T>
+double median(const T r) {
+  switch (r.size()) {
+    case 0L: return -(0e0);
+    case 1L: return *(r.begin());
+    default:
+      const auto a = (r.end() - ((r.size() / 2L) + 1L));
+      switch (r.size() % 2L) {
+        case 0L: return ((*a + *(a + 1L)) / 2e0);
+        default: return *a;
+}}}
+
+// mean of vector template function
+template<typename T>
+double mean(const T r, const double sum) {
+  switch (r.size()) {
+    case 0L: return -(0e0);
+    default: return (sum / r.size());
+}}
+
 // trial namespace
 namespace trial {
   const size_t size = 1'000'000L;       // trial::size
@@ -53,7 +74,7 @@ int trial::fn(const size_t n) {
   // random number generator
   RNG<trial::size> r;
   // container vector
-  std::vector<double, scalable_allocator<double>> v((trial::size | 1L));
+  std::vector<double, scalable_allocator<double>> v((trial::size));
   double v_sum = 0e0;
   // double for each
   switch (fusion) {
@@ -96,13 +117,13 @@ int trial::fn(const size_t n) {
       printf("RNG FAILED: status error %i\n", st);
     break;
     default:
-      const auto v_mean = (v_sum / v.size());
+      const auto v_mean = mean(v, v_sum);
 
       bc.push(tick_count::now());  // 3)
       parallel_sort(v);
       bc.push(tick_count::now());
 
-      const auto v_median = v[(v.size() / 2L)];
+      const auto v_median = median(v);
 
       bc.push(tick_count::now());  // 4)
       parallel_for_each(v, [&](auto &elem) { elem = fabs((elem - v_median)); });
@@ -112,7 +133,7 @@ int trial::fn(const size_t n) {
       parallel_sort(v);
       bc.push(tick_count::now());
 
-      const auto v_mad = v[(v.size() / 2L)];
+      const auto v_mad = median(v);
 
       // print stats
       printf( "%zu) trial size:                        %zu double-precision\n", n, v.size()  );
@@ -127,8 +148,8 @@ int trial::fn(const size_t n) {
       printf( "5) parallel_sort                      %.6fs\n", bc.f1()                       );
       printf( "1) sum: sum(v)                        %.23e\n", v_sum                         );
       printf( "2) mean: sum/size(v)                  %.17e\n", v_mean                        );
-      printf( "3) median: sort(v)[size(v)/2]         %.17e\n", v_median                      );
-      printf( "4) mad: sort(v-median)[size(v)/2]     %.17e\n", v_mad                         );
+      printf( "3) median: sort(v)[med]               %.17e\n", v_median                      );
+      printf( "4) mad: sort(v-median)[med]           %.17e\n", v_mad                         );
       // implementation-dependent arithmetic types
       printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
       printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
