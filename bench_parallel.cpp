@@ -6,6 +6,7 @@
 #include <svrng.h>
 #include <oneapi/tbb.h>
 #include <oneapi/tbb/scalable_allocator.h>
+#include <oneapi/tbb/flow_graph.h>
 
 #include <cstdio>
 #include <vector>
@@ -43,10 +44,10 @@ namespace trial {
   enum FUSION         { ON, OFF };      // loop fusion constants
   const int fusion  = FUSION::OFF;      // loop fusion constant
   volatile int st   = SVRNG_STATUS_OK;  // RNG status
-  int fn( void );
+  int fn(const size_t n);
 }
 
-int trial::fn( void ) {
+int trial::fn(const size_t n) {
   // diagnostic
   bench bc;
   // random number generator
@@ -114,7 +115,7 @@ int trial::fn( void ) {
       const auto v_mad = v[(v.size() / 2L)];
 
       // print stats
-      printf( "A) trial size                         %zu double-precision\n", v.size()       );
+      printf( "%zu) trial size:                        %zu double-precision\n", n, v.size()  );
     if(fusion == FUSION::ON) {
       printf( "1&2) for generate [fused reduce]      %.6fs\n", bc.f1()                       );
     }else{
@@ -138,7 +139,15 @@ int trial::fn( void ) {
   return st;
 }
 
+using namespace oneapi::tbb::flow;
+
 int main() {
-  parallel_invoke(trial::fn, [](){});
+  graph g;
+  function_node<size_t, int, queueing> n(g, info::default_concurrency(),
+    [](const size_t v) { return trial::fn(v); });
+
+  for(size_t i = 1L; i < 2L; ++i) { n.try_put(i); }
+  g.wait_for_all();
+
   return 0;
 }
