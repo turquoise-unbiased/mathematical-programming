@@ -11,6 +11,9 @@
 #include <cstdio>
 #include <vector>
 
+#define SVX (2L << 4L)  // short vector elements 2^n
+typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));  // short vector arithmetic type
+
 using namespace oneapi::tbb;
 
 // tpl namespace
@@ -18,8 +21,7 @@ namespace tpl {
   // benchmark template class
   template<typename T = tick_count, typename Q = concurrent_queue<T>>
   class bench {
-    T t0, t1;
-    Q q;
+    T t0, t1; Q q;
   public:
     virtual void push(const T t) { q.push(t); }  // proxy with private
     virtual double f1() {
@@ -37,7 +39,26 @@ namespace tpl {
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
     double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
-    svrng_double32_t unif32() const { return svrng_generate32_double(engine, distr); }  // proxy with private
+    // proxy with private
+    #if not (SVX % 32L)
+      using svrngx_t = svrng_double32_t;
+      svrngx_t unifsvx() const { return svrng_generate32_double(engine, distr); }
+    #elif not (SVX % 16L)
+      using svrngx_t = svrng_double16_t;
+      svrngx_t unifsvx() const { return svrng_generate16_double(engine, distr); }
+    #elif not (SVX % 8L)
+      using svrngx_t = svrng_double8_t;
+      svrngx_t unifsvx() const { return svrng_generate8_double(engine, distr); }
+    #elif not (SVX % 4L)
+      using svrngx_t = svrng_double4_t;
+      svrngx_t unifsvx() const { return svrng_generate4_double(engine, distr); }
+    #elif not (SVX % 2L)
+      using svrngx_t = svrng_double2_t;
+      svrngx_t unifsvx() const { return svrng_generate2_double(engine, distr); }
+    #else
+      using svrngx_t = double;
+      svrngx_t unifsvx() const { return svrng_generate_double(engine, distr); }
+    #endif
   };
 
   // median of vector template function
@@ -60,6 +81,17 @@ namespace tpl {
       case 0L: return -(0e0);
       default: return (sum / r.size());
   }}
+
+  // SVRNG modulus template function
+  template<typename S, typename T>
+  T svrng_mod(const T end, const size_t r) {
+    switch (r) {
+      case 0L: return end;
+      default:
+        switch ((sizeof(S) ^ sizeof(double))) {
+          case 0L: return (end - r);
+          default: return (end - 1L);
+  }}}
 }  // end tpl
 
 // trial namespace
@@ -76,9 +108,23 @@ int trial::fn(const size_t xch) {
   tpl::bench bench;
   // random number generator
   tpl::RNG<trial::size> rng;
-  // container vector
+  using svrngx_t = decltype(rng)::svrngx_t;
+  // container vector, pointers, reducers
   std::vector<double, scalable_allocator<double>> vec(trial::size);
-  double v_sum = 0e0;
+  auto vec_mod = [&](const auto r) { return (vec.end() - r); };  // vector modulus
+  // svrng pointers
+  const svrngx_t* sv_begin = (svrngx_t*)(&(*vec.begin()));
+  const svrngx_t* sv_end   = (svrngx_t*)(&(*vec.end()));
+  auto sv_mod = [&](const auto r)-> const svrngx_t* { return tpl::svrng_mod<svrngx_t>(sv_end, r); };  // SVRNG modulus
+  // short vector pointers
+  const svxdf_t* df_begin = (svxdf_t*)(&(*vec.begin()));
+  const svxdf_t* df_end   = (svxdf_t*)(&(*vec.end()));
+  auto df_mod = [&](const auto r)-> const svxdf_t* { return (r ? (df_end - 1L) : df_end); };  // short vector modulus
+  // reducers
+  svxdf_t df_sum = { 0e0 };  // short vector reducer
+  const double* df_sum_0  = (double*)(&df_sum);  // short vector reducer pointers
+  const double* df_sum_lb = (df_sum_0 + (sizeof(svxdf_t) / sizeof(double)));
+  double v_sum = 0e0;  // double reducer
   // double for each
   switch (fusion) {
     case FUSION::ON:
@@ -92,24 +138,24 @@ int trial::fn(const size_t xch) {
       st = svrng_get_status();
     break;
     default:
-      const auto rem = (vec.size() % 32L);
-      const auto end = (rem ? (vec.end() - 32L) : vec.end());
+      auto rem = (vec.size() % (sizeof(svrngx_t) / sizeof(double)));  // vector modulus reminder
+      const auto sv_end = sv_mod(rem);  // SVRNG modulus
 
       bench.push(tick_count::now());  // 1)
-      for(decltype(vec)::const_iterator k = vec.begin(); k < end; k += 32L) {
-        *((svrng_double32_t*)(&(*k))) = rng.unif32();
-      }
-      // remainder
-      for(decltype(vec)::iterator k = (vec.end() - rem); k < vec.end(); ++k) {
-        *k = rng.unif();
-      }
+      for(svrngx_t* k = (svrngx_t*)(sv_begin); k < sv_end; ++k) { *k = rng.unifsvx(); }
+      for(decltype(vec)::iterator k = vec_mod(rem); k < vec.end(); ++k) { *k = rng.unif(); }  // remainder
       bench.push(tick_count::now());
 
       if(( st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
 
       // sum
+      rem = (vec.size() % SVX);  // vector modulus reminder
+      const auto df_end = df_mod(rem);  // short vector modulus
+
       bench.push(tick_count::now());  // 2)
-      for(decltype(vec)::const_iterator k = vec.begin(); k < vec.end(); ++k) { v_sum += *k; }
+      for(const svxdf_t* k = df_begin; k < df_end; ++k) { df_sum += *k; }
+      for(const double* k = df_sum_0; k < df_sum_lb; ++k) { v_sum += *k; }
+      for(decltype(vec)::const_iterator k = vec_mod(rem); k < vec.end(); ++k) { v_sum += *k; }  // remainder
       bench.push(tick_count::now());
   }
 
@@ -164,6 +210,7 @@ int trial::fn(const size_t xch) {
 }
 
 int main() {
+  // graph parallelism
   flow::graph graph;
   flow::function_node<size_t, int, flow::queueing> fn(graph, info::default_concurrency(),
                                                       [](const size_t v) { return trial::fn(v); });
