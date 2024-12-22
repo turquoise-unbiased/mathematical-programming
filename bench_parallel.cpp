@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <vector>
 
+typedef double v32df __attribute__ ((vector_size (256)));
+
 using namespace oneapi::tbb;
 
 // tpl namespace
@@ -78,6 +80,11 @@ int trial::fn(const size_t xch) {
   tpl::RNG<trial::size> rng;
   // container vector
   std::vector<double, scalable_allocator<double>> vec(trial::size);
+  svrng_double32_t* sv_begin = (svrng_double32_t*)(&(*vec.begin()));
+  svrng_double32_t* sv_end   = (svrng_double32_t*)(&(*vec.end()));
+  v32df* df_begin = (v32df*)(&(*vec.begin()));
+  v32df* df_end   = (v32df*)(&(*vec.end()));
+  v32df df_sum = { 0e0 };
   double v_sum = 0e0;
   // double for each
   switch (fusion) {
@@ -92,24 +99,25 @@ int trial::fn(const size_t xch) {
       st = svrng_get_status();
     break;
     default:
-      const auto rem = (vec.size() % 32L);
-      const auto end = (rem ? (vec.end() - 32L) : vec.end());
+      const auto rem_32 = (vec.size() % 32L);
+      const auto end_sv = (rem_32 ? (sv_end - 1L) : sv_end);
 
       bench.push(tick_count::now());  // 1)
-      for(decltype(vec)::const_iterator k = vec.begin(); k < end; k += 32L) {
-        *((svrng_double32_t*)(&(*k))) = rng.unif32();
-      }
+      for(svrng_double32_t* k = sv_begin; k < end_sv; ++k) { *k = rng.unif32(); }
       // remainder
-      for(decltype(vec)::iterator k = (vec.end() - rem); k < vec.end(); ++k) {
-        *k = rng.unif();
-      }
+      for(decltype(vec)::iterator k = (vec.end() - rem_32); k < vec.end(); ++k) { *k = rng.unif(); }
       bench.push(tick_count::now());
 
       if(( st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
 
       // sum
+      const auto end_df = (rem_32 ? (df_end - 1L) : df_end);
+
       bench.push(tick_count::now());  // 2)
-      for(decltype(vec)::const_iterator k = vec.begin(); k < vec.end(); ++k) { v_sum += *k; }
+      for(v32df* k = df_begin; k < end_df; ++k) { df_sum += *k; }
+      for(size_t i = 0L; i < 32L; ++i) { v_sum += df_sum[i]; }
+      // remainder
+      for(decltype(vec)::iterator k = (vec.end() - rem_32); k < vec.end(); ++k) { v_sum += *k; }
       bench.push(tick_count::now());
   }
 
