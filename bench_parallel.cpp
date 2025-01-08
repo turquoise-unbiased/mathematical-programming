@@ -12,6 +12,8 @@
 #define SVX (2L << 4L)  // short vector elements 2^n
 typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));  // short vector arithmetic type
 
+#define MILLE 1'000'000L  // trial::size
+
 using namespace oneapi::tbb;
 
 // tpl namespace
@@ -27,13 +29,14 @@ namespace tpl {
   };
 
   // RNG template class
-  template<size_t R, unsigned S = 37u>
+  template<unsigned S = 37u>
   class RNG {
     svrng_engine_t engine;
     svrng_distribution_t distr;
   public:
-    RNG() { engine = svrng_new_rand_engine(S);
-            distr  = svrng_new_uniform_distribution_double(1e0, (R / 2e0)); }
+    RNG(const size_t r = MILLE) {
+      engine = svrng_new_rand_engine(S);
+      distr  = svrng_new_uniform_distribution_double(1e0, (r / 2e0)); }
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
     double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
@@ -81,17 +84,17 @@ namespace tpl {
   }}
 
   // vector implementation template class
-  template<typename T, size_t S>
+  template<typename T>
   class vec {
     void* ptr;  // vector pointer
   public:
-    const size_t size = S;  // vector size
+    size_t size;  // vector size
     T* begin;   // vector pointer begin
     T* end;     // vector pointer end
-    // stats
-    T sum, mean, median, mad;
+    T sum, mean, median, mad;  // stats
 
-    vec() {
+    vec(const size_t r = MILLE) {
+      size = r;
       ptr = scalable_calloc(size, sizeof(T));
       begin = (T*)ptr;
       end = (begin + size);
@@ -122,21 +125,22 @@ namespace tpl {
 
 // trial namespace
 namespace trial {
-  const size_t size = 1'000'000L;       // trial::size
-  enum FUSION         { ON, OFF };      // loop fusion constants
-  const int fusion  = FUSION::OFF;      // loop fusion constant
-  volatile int st   = SVRNG_STATUS_OK;  // RNG status
+  enum FUSION { ON, OFF };  // loop fusion constants
+  thread_local int fusion = FUSION::OFF;  // loop fusion constant
+  thread_local size_t size = MILLE;  // trial::size
+  thread_local int st = SVRNG_STATUS_OK;  // RNG status
   int fn(const size_t xch);
 }  // end trial
 
 int trial::fn(const size_t xch) {
+  trial::size *= xch;
   // diagnostic
   tpl::bench bench;
   // random number generator
-  tpl::RNG<trial::size> rng;
+  tpl::RNG rng(trial::size);
   using svrngx_t = decltype(rng)::svrngx_t;
   // container vector, pointers, reducers
-  tpl::vec<double, trial::size> vec;
+  tpl::vec<double> vec(trial::size);
   // svrng pointers
   svrngx_t* rd_begin = (svrngx_t*)(&(*vec.begin));
   const svrngx_t* rd_end = vec.sv_mod<svrngx_t>();  // SVRNG modulus
