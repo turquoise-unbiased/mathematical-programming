@@ -1,16 +1,24 @@
 /* 2024, Wojciech Lawren, All rights reserved.
-   benchmark parallel algorithms c++17 & lambdas c++11 */
+   benchmark parallel algorithms and short vectors using double precision floating-point values
+*/
 #include <stdio.h>
 #include <float.h>
 #include <fenv.h>
-#include <mathimf.h>
+#include <math.h>
 #include <svrng.h>
-#include <oneapi/tbb.h>
+
 #include <oneapi/tbb/scalable_allocator.h>
 #include <oneapi/tbb/flow_graph.h>
+#include <oneapi/tbb/concurrent_queue.h>
+#include <oneapi/tbb/tick_count.h>
+#include <oneapi/tbb/parallel_for_each.h>
+#include <oneapi/tbb/parallel_sort.h>
 
-#define SVX (2L << 4L)  // short vector elements 2^n
+constexpr size_t SVX = (2L << 4L);  // short vector elements 2^n [>= 2]
+
 typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));  // short vector arithmetic type
+
+constexpr double MILLE = 1e6;  // trial_scale [>= SVX]
 
 using namespace oneapi::tbb;
 
@@ -19,21 +27,25 @@ namespace tpl {
   // benchmark template class
   template<typename T = tick_count, typename Q = concurrent_queue<T>>
   class bench {
-    T t0, t1; Q q;
+    Q q;
   public:
     virtual void push(const T t) { q.push(t); }  // proxy with private
-    virtual const double f1() {
+    virtual const double f1() { T t0, t1;
       return ((int(q.try_pop(t0)) & int(q.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); }  // time span
   };
 
   // RNG template class
-  template<size_t R, unsigned S = 37u>
+  template<unsigned S = 37u>
   class RNG {
     svrng_engine_t engine;
     svrng_distribution_t distr;
   public:
-    RNG() { engine = svrng_new_rand_engine(S);
-            distr  = svrng_new_uniform_distribution_double(1e0, (R / 2e0)); }
+    int st = SVRNG_STATUS_OK;  // RNG status
+    RNG(const double r) {
+      engine = svrng_new_rand_engine(S);
+      distr  = svrng_new_uniform_distribution_double(0e0, r);
+      st = svrng_get_status();
+    }
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
     double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
@@ -61,12 +73,12 @@ namespace tpl {
 
   // median of vector template function
   template<typename T>
-  const T median(const T* begin, const T* end, const size_t size) {
+  const T median(const T* const begin, const T* const end, const size_t size) {
     switch (size) {
       case 0L: return -(0e0);
       case 1L: return *begin;
       default:
-        const T* a = (end - ((size / 2L) + 1L));
+        const T* const a = (end - ((size / 2L) + 1L));
         switch ((size % 2L)) {
           case 0L: return ((*a + *(a + 1L)) / 2e0);
           default: return *a;
@@ -81,22 +93,22 @@ namespace tpl {
   }}
 
   // vector implementation template class
-  template<typename T, size_t S>
+  template<typename T>
   class vec {
-    void* ptr;  // vector pointer
+    void* const ptr;  // vector pointer
   public:
-    const size_t size = S;  // vector size
-    T* begin;   // vector pointer begin
-    T* end;     // vector pointer end
-    // stats
-    T sum, mean, median, mad;
+    const size_t size;  // vector size
+    T* const begin;   // vector pointer begin
+    T* const end;     // vector pointer end
+    T sum, mean, median, mad;  // stats
+    int st = TBBMALLOC_OK;  // vec status
 
-    vec() {
-      ptr = scalable_calloc(size, sizeof(T));
-      begin = (T*)ptr;
-      end = (begin + size);
-      sum = mean = median = mad = 0e0;
-    }
+    vec(const size_t r)
+      : ptr( scalable_calloc(r, sizeof(T)) )
+      , size( r )
+      , begin( (T*)ptr )
+      , end( (begin + size) )
+    { if(not ptr) { st = TBBMALLOC_NO_EFFECT; } }
     ~vec() { scalable_free(ptr); }
 
     template<typename Q>
@@ -109,7 +121,7 @@ namespace tpl {
     template<typename Q>
     const Q* sv_mod() const {
       const size_t rem = this->rem<Q>();
-      const Q* end = (Q*)(&(*this->end));
+      const Q* const end = (Q*)(&(*this->end));
       switch (rem) {
         case 0L: return end;
         default:
@@ -122,68 +134,69 @@ namespace tpl {
 
 // trial namespace
 namespace trial {
-  const size_t size = 1'000'000L;       // trial::size
-  enum FUSION         { ON, OFF };      // loop fusion constants
-  const int fusion  = FUSION::OFF;      // loop fusion constant
-  volatile int st   = SVRNG_STATUS_OK;  // RNG status
-  int fn(const size_t xch);
+  const int STATUS_OK = (SVRNG_STATUS_OK | TBBMALLOC_OK);  // constructors ok
+  enum class FUSION { ON = 1, OFF };  // loop fusion constants
+  size_t fn(const size_t N);
 }  // end trial
 
-int trial::fn(const size_t xch) {
+size_t trial::fn(const size_t N) {
+  FUSION fusion = FUSION::OFF;  // loop fusion constant
+  double trial_scale = scalbln(MILLE, N);  // trial_scale
+  size_t trial_size  = lrint(trial_scale);  // trial_size
   // diagnostic
   tpl::bench bench;
   // random number generator
-  tpl::RNG<trial::size> rng;
+  tpl::RNG rng(trial_scale);
   using svrngx_t = decltype(rng)::svrngx_t;
   // container vector, pointers, reducers
-  tpl::vec<double, trial::size> vec;
-  // svrng pointers
-  svrngx_t* rd_begin = (svrngx_t*)(&(*vec.begin));
-  const svrngx_t* rd_end = vec.sv_mod<svrngx_t>();  // SVRNG modulus
-  double* vec_rd = vec.v_mod<svrngx_t>();  // vector modulus
-  // short vector pointers
-  const svxdf_t* sv_begin = (svxdf_t*)(&(*vec.begin));
-  const svxdf_t* sv_end = vec.sv_mod<svxdf_t>();  // short vector modulus
-  const double* vec_sv = vec.v_mod<svxdf_t>();  // vector modulus
-  // reducers
-  svxdf_t sv_sum = { 0e0 };  // short vector reducer
-  const double* svs_0 = (double*)(&sv_sum);  // short vector reducer pointers
-  const double* svs_f = (svs_0 + (sizeof(svxdf_t) / sizeof(double)));
+  tpl::vec<double> vec(trial_size);
   // double for each
-  switch (fusion) {
-    case FUSION::ON:
-      bench.push(tick_count::now());  // 1&2)
-      for(double* k = vec.begin; k < vec.end; ++k) {
-        *k = rng.unif();
-        vec.sum += *k;
-      }
-      bench.push(tick_count::now());
+  switch ( rng.st = svrng_get_status(); ( rng.st | vec.st ) ) {
+    case STATUS_OK:
+      // svrng pointers
+      svrngx_t* const rd_begin = (svrngx_t*)(&(*vec.begin));
+      const svrngx_t* const rd_end = vec.sv_mod<svrngx_t>();  // SVRNG modulus
+      double* const vec_rd = vec.v_mod<svrngx_t>();  // vector modulus
+      // short vector pointers
+      const svxdf_t* const sv_begin = (svxdf_t*)(&(*vec.begin));
+      const svxdf_t* const sv_end = vec.sv_mod<svxdf_t>();  // short vector modulus
+      const double* const vec_sv = vec.v_mod<svxdf_t>();  // vector modulus
+      // reducers
+      svxdf_t sv_sum = { 0e0 };  // short vector reducer
+      const double* const svs_0 = (double*)(&sv_sum);  // short vector reducer pointers
+      const double* const svs_f = (svs_0 + (sizeof(svxdf_t) / sizeof(double)));
+      // FUSION
+      switch (fusion) {
+        case FUSION::ON:
+          bench.push(tick_count::now());  // 1&2)
+          for(double* k = vec.begin; k < vec.end; ++k) {
+            *k = rng.unif();
+            vec.sum += *k;
+          }
+          bench.push(tick_count::now());
+        break;
+        case FUSION::OFF:
+          bench.push(tick_count::now());  // 1)
+          for(svrngx_t* k = rd_begin; k < rd_end; ++k) { *k = rng.unifsvx(); }
+          for(double* k = vec_rd; k < vec.end; ++k) { *k = rng.unif(); }  // remainder
+          bench.push(tick_count::now());
 
-      st = svrng_get_status();
+          if(( rng.st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
+
+          // sum
+          bench.push(tick_count::now());  // 2)
+          for(const svxdf_t* k = sv_begin; k < sv_end; ++k) { sv_sum += *k; }
+          for(const double* k = svs_0; k < svs_f; ++k) { vec.sum += *k; }
+          for(const double* k = vec_sv; k < vec.end; ++k) { vec.sum += *k; }  // remainder
+          bench.push(tick_count::now());
+        break;
+      }  // FUSION
     break;
-    default:
-      bench.push(tick_count::now());  // 1)
-      for(svrngx_t* k = rd_begin; k < rd_end; ++k) { *k = rng.unifsvx(); }
-      for(double* k = vec_rd; k < vec.end; ++k) { *k = rng.unif(); }  // remainder
-      bench.push(tick_count::now());
-
-      if(( st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
-
-      // sum
-      bench.push(tick_count::now());  // 2)
-      for(const svxdf_t* k = sv_begin; k < sv_end; ++k) { sv_sum += *k; }
-      for(const double* k = svs_0; k < svs_f; ++k) { vec.sum += *k; }
-      for(const double* k = vec_sv; k < vec.end; ++k) { vec.sum += *k; }  // remainder
-      bench.push(tick_count::now());
-  }
-
+  }  // STATUS
   // mean, median, mad
   // computing or jump according with RNG status
-  switch (st) {
-    case (not SVRNG_STATUS_OK):
-      printf("RNG FAILED: status error %i\n", st);
-    break;
-    default:
+  switch ( rng.st = svrng_get_status(); ( rng.st | vec.st ) ) {
+    case STATUS_OK:
       vec.mean = tpl::mean(vec.sum, vec.size);
 
       bench.push(tick_count::now());  // 3)
@@ -203,13 +216,13 @@ int trial::fn(const size_t xch) {
       vec.mad = tpl::median(vec.begin, vec.end, vec.size);
 
       // print stats
-      printf( "%zu) trial size:                        %zu double-precision\n", xch, vec.size);
-    if(fusion == FUSION::ON) {
+      printf( "%zu) trial size:                        %zu doubles\n", N, vec.size           );
+    switch (fusion) { case FUSION::ON:
       printf( "1&2) for generate [fused reduce]      %.6fs\n", bench.f1()                    );
-    }else{
+    break; case FUSION::OFF:
       printf( "1) for generate                       %.6fs\n", bench.f1()                    );
       printf( "2) for reduce                         %.6fs\n", bench.f1()                    );
-    }
+    break; }  // FUSION
       printf( "3) parallel_sort                      %.6fs\n", bench.f1()                    );
       printf( "4) parallel_for_each                  %.6fs\n", bench.f1()                    );
       printf( "5) parallel_sort                      %.6fs\n", bench.f1()                    );
@@ -222,19 +235,35 @@ int trial::fn(const size_t xch) {
       printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
       printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
       printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
-      printf( "e) x87 FPU exception flags:           %i\n",  fetestexcept(FE_ALL_EXCEPT)     );
-  }
-  return st;
-}
+      printf( "e) x87 FPU exception flags:           %i\n\n", fetestexcept(FE_ALL_EXCEPT)    );
+    break;
+    default:
+      printf( "APP FAILED: status rng: %i | tbb: %i\n", rng.st, vec.st );
+    return 0L;
+  }  // STATUS
+  return trial_size;
+}  // trial::fn
 
 int main() {
+  size_t test_size = 0L;  // compound parallel size
   // graph parallelism
   flow::graph graph;
-  flow::function_node<size_t, int, flow::queueing> fn(graph, info::default_concurrency(),
-                                                      [](const size_t v) { return trial::fn(v); });
-
-  for(size_t i = 1L; i < 2L; ++i) { fn.try_put(i); }
-  graph.wait_for_all();
+  // function_node
+  flow::function_node<size_t, size_t, flow::queueing> fn(graph, flow::unlimited,  // flow::serial
+    [&](const size_t &n) { return trial::fn(n); });
+  // function_node
+  flow::function_node<size_t, size_t, flow::queueing_lightweight> comp(graph, flow::serial,
+    [&](const size_t &z) { return __atomic_add_fetch(&test_size, z, __ATOMIC_SEQ_CST); });
+  // edge
+  flow::make_edge(fn, comp);
+  // execute incoming message
+  for(size_t n = 0L; n < 1L; ++n) { fn.try_put(n); }
+  // block & catch & throw
+  try { graph.wait_for_all(); }
+  catch (...) { graph.cancel(); throw; }
+  // print info
+  printf( "a) graph exception thrown:            %i\n", graph.exception_thrown()   );
+  printf( "b) compound test size:                %zu\n", test_size                 );
 
   return 0;
 }
