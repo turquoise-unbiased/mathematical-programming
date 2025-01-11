@@ -1,5 +1,6 @@
 /* 2024, Wojciech Lawren, All rights reserved.
    benchmark parallel algorithms c++17 & lambdas c++11 */
+#include <assert.h>
 #include <stdio.h>
 #include <float.h>
 #include <fenv.h>
@@ -35,6 +36,7 @@ namespace tpl {
   public:
     int st = SVRNG_STATUS_OK;  // RNG status
     RNG(const size_t r = MILLE) {
+      assert((r > SVX));
       engine = svrng_new_rand_engine(S);
       distr  = svrng_new_uniform_distribution_double(1e0, (r / 2e0));
       st = svrng_get_status();
@@ -97,17 +99,23 @@ namespace tpl {
     T sum, mean, median, mad;  // stats
 
     vec(const size_t r = MILLE) {
+      assert((r > SVX));
       size = r;
       ptr = scalable_calloc(size, sizeof(T));
       if(not ptr) { st = TBBMALLOC_NO_EFFECT; }
       begin = (T*)ptr;
       end = (begin + size);
       sum = mean = median = mad = 0e0;
+      assert(((end - begin) == size));
     }
     ~vec() { scalable_free(ptr); }
 
     template<typename Q>
-    const size_t rem() const { return (size % (sizeof(Q) / sizeof(T))); }  // reminder
+    const size_t rem() const {
+      assert((sizeof(Q) >= sizeof(T)));
+      assert((size > (sizeof(Q) / sizeof(T))));
+      return (size % (sizeof(Q) / sizeof(T)));
+    }  // reminder
 
     template<typename Q>
     T* v_mod() const { return (end - rem<Q>()); }  // vector modulus
