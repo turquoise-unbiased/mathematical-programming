@@ -140,9 +140,9 @@ namespace trial {
 }  // end trial
 
 size_t trial::fn(const size_t N) {
-  FUSION fusion = FUSION::OFF;  // loop fusion constant
-  double trial_scale = scalbln(MILLE, N);  // trial_scale
-  size_t trial_size  = lrint(trial_scale);  // trial_size
+  const FUSION fusion = FUSION::OFF;  // loop fusion constant
+  const double trial_scale = scalbln(MILLE, N);  // trial_scale
+  const size_t trial_size  = lrint(trial_scale);  // trial_size
   // diagnostic
   tpl::bench bench;
   // random number generator
