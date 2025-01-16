@@ -91,22 +91,21 @@ namespace tpl {
 
   // vector implementation template class
   template<typename T>
-  class vec {
+  class vector {
     void* const ptr;  // vector pointer
   public:
     const size_t size;  // vector size
     T* const begin;   // vector pointer begin
     T* const end;     // vector pointer end
-    T sum, mean, median, mad;  // stats
-    int st = TBBMALLOC_OK;  // vec status
+    const int st;  // vec status
 
-    vec(const size_t r)
+    vector(const size_t r)
       : ptr( scalable_calloc(r, sizeof(T)) )
       , size( r )
       , begin( (T*)ptr )
       , end( (begin + size) )
-    { if(not ptr) { st = TBBMALLOC_NO_EFFECT; } }
-    ~vec() { scalable_free(ptr); }
+      , st( (ptr ? TBBMALLOC_OK : TBBMALLOC_NO_EFFECT) ) {}
+    ~vector() { scalable_free(ptr); }
 
     template<typename Q>
     const size_t rem() const { return (size % (sizeof(Q) / sizeof(T))); }  // reminder
@@ -147,7 +146,8 @@ size_t trial::fn(const size_t N) {
   using svrngx_t = decltype(rng)::svrngx_t;
   int rng_st;  // RNG status
   // container vector, pointers, reducers
-  tpl::vec<double> vec(trial_size);
+  const tpl::vector<double> vec(trial_size);
+  double v_mean, v_median, v_mad, v_sum = 0e0;  // stats
   // double for each
   switch ( rng_st = svrng_get_status(); ( rng_st | vec.st ) ) {
     case STATUS_OK:
@@ -169,7 +169,7 @@ size_t trial::fn(const size_t N) {
           bench.push(tick_count::now());  // 1&2)
           for(double* k = vec.begin; k < vec.end; ++k) {
             *k = rng.unif();
-            vec.sum += *k;
+            v_sum += *k;
           }
           bench.push(tick_count::now());
         break;
@@ -184,8 +184,8 @@ size_t trial::fn(const size_t N) {
           // sum
           bench.push(tick_count::now());  // 2)
           for(const svxdf_t* k = sv_begin; k < sv_end; ++k) { sv_sum += *k; }
-          for(const double* k = svs_0; k < svs_f; ++k) { vec.sum += *k; }
-          for(const double* k = vec_sv; k < vec.end; ++k) { vec.sum += *k; }  // remainder
+          for(const double* k = svs_0; k < svs_f; ++k) { v_sum += *k; }
+          for(const double* k = vec_sv; k < vec.end; ++k) { v_sum += *k; }  // remainder
           bench.push(tick_count::now());
         break;
       }  // FUSION
@@ -195,23 +195,23 @@ size_t trial::fn(const size_t N) {
   // computing or jump according with RNG status
   switch ( rng_st = svrng_get_status(); ( rng_st | vec.st ) ) {
     case STATUS_OK:
-      vec.mean = tpl::mean(vec.sum, vec.size);
+      v_mean = tpl::mean(v_sum, vec.size);
 
       bench.push(tick_count::now());  // 3)
       parallel_sort(vec.begin, vec.end);
       bench.push(tick_count::now());
 
-      vec.median = tpl::median(vec.begin, vec.end, vec.size);
+      v_median = tpl::median(vec.begin, vec.end, vec.size);
 
       bench.push(tick_count::now());  // 4)
-      parallel_for_each(vec.begin, vec.end, [&](auto &elem) { elem = fabs((elem - vec.median)); });
+      parallel_for_each(vec.begin, vec.end, [&](auto &elem) { elem = fabs((elem - v_median)); });
       bench.push(tick_count::now());
 
       bench.push(tick_count::now());  // 5)
       parallel_sort(vec.begin, vec.end);
       bench.push(tick_count::now());
 
-      vec.mad = tpl::median(vec.begin, vec.end, vec.size);
+      v_mad = tpl::median(vec.begin, vec.end, vec.size);
 
       // print stats
       printf( "%zu) trial size:                        %zu doubles\n", N, vec.size           );
@@ -224,10 +224,10 @@ size_t trial::fn(const size_t N) {
       printf( "3) parallel_sort                      %.6fs\n", bench.f1()                    );
       printf( "4) parallel_for_each                  %.6fs\n", bench.f1()                    );
       printf( "5) parallel_sort                      %.6fs\n", bench.f1()                    );
-      printf( "1) sum: sum(v)                        %.23e\n", vec.sum                       );
-      printf( "2) mean: sum/size(v)                  %.17e\n", vec.mean                      );
-      printf( "3) median: sort(v)[med]               %.17e\n", vec.median                    );
-      printf( "4) mad: sort(v-median)[med]           %.17e\n", vec.mad                       );
+      printf( "1) sum: sum(v)                        %.23e\n", v_sum                         );
+      printf( "2) mean: sum/size(v)                  %.17e\n", v_mean                        );
+      printf( "3) median: sort(v)[med]               %.17e\n", v_median                      );
+      printf( "4) mad: sort(v-median)[med]           %.17e\n", v_mad                         );
       // implementation-dependent arithmetic types
       printf( "a) Machine epsilon (f):               %e\n",  FLT_EPSILON                     );
       printf( "b) Machine epsilon (ff):              %e\n",  DBL_EPSILON                     );
