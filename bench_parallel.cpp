@@ -37,15 +37,12 @@ namespace tpl {
   // RNG template class
   template<unsigned S = 37u>
   class RNG {
-    svrng_engine_t engine;
-    svrng_distribution_t distr;
+    const svrng_engine_t engine;
+    const svrng_distribution_t distr;
   public:
-    int st = SVRNG_STATUS_OK;  // RNG status
-    RNG(const double r) {
-      engine = svrng_new_rand_engine(S);
-      distr  = svrng_new_uniform_distribution_double(0e0, r);
-      st = svrng_get_status();
-    }
+    RNG(const double r)
+      : engine( svrng_new_rand_engine(S) )
+      , distr( svrng_new_uniform_distribution_double(0e0, r) ) {}
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
     double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
@@ -146,12 +143,13 @@ size_t trial::fn(const size_t N) {
   // diagnostic
   tpl::bench bench;
   // random number generator
-  tpl::RNG rng(trial_scale);
+  const tpl::RNG rng(trial_scale);
   using svrngx_t = decltype(rng)::svrngx_t;
+  int rng_st;  // RNG status
   // container vector, pointers, reducers
   tpl::vec<double> vec(trial_size);
   // double for each
-  switch ( rng.st = svrng_get_status(); ( rng.st | vec.st ) ) {
+  switch ( rng_st = svrng_get_status(); ( rng_st | vec.st ) ) {
     case STATUS_OK:
       // svrng pointers
       svrngx_t* const rd_begin = (svrngx_t*)(&(*vec.begin));
@@ -181,7 +179,7 @@ size_t trial::fn(const size_t N) {
           for(double* k = vec_rd; k < vec.end; ++k) { *k = rng.unif(); }  // remainder
           bench.push(tick_count::now());
 
-          if(( rng.st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
+          if(( rng_st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
 
           // sum
           bench.push(tick_count::now());  // 2)
@@ -195,7 +193,7 @@ size_t trial::fn(const size_t N) {
   }  // STATUS
   // mean, median, mad
   // computing or jump according with RNG status
-  switch ( rng.st = svrng_get_status(); ( rng.st | vec.st ) ) {
+  switch ( rng_st = svrng_get_status(); ( rng_st | vec.st ) ) {
     case STATUS_OK:
       vec.mean = tpl::mean(vec.sum, vec.size);
 
@@ -238,7 +236,7 @@ size_t trial::fn(const size_t N) {
       printf( "e) x87 FPU exception flags:           %i\n\n", fetestexcept(FE_ALL_EXCEPT)    );
     break;
     default:
-      printf( "APP FAILED: status rng: %i | tbb: %i\n", rng.st, vec.st );
+      printf( "APP FAILED: status rng: %i | tbb: %i\n", rng_st, vec.st );
     return 0L;
   }  // STATUS
   return trial_size;
