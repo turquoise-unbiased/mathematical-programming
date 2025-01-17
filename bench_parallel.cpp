@@ -132,6 +132,7 @@ namespace trial {
   const int STATUS_OK = (SVRNG_STATUS_OK | TBBMALLOC_OK);  // constructors ok
   enum class FUSION { ON = 1, OFF };  // loop fusion constants
   size_t fn(const size_t N);
+  size_t (*fnptr)(size_t) = fn;  // fn pointer
 }  // end trial
 
 size_t trial::fn(const size_t N) {
@@ -247,7 +248,7 @@ int main() {
   flow::graph graph;
   // function_node
   flow::function_node<size_t, size_t, flow::queueing> fn(graph, flow::unlimited,  // flow::serial
-    [&](const size_t &n) { return trial::fn(n); });
+    [&](const size_t &n) { return trial::fnptr(n); });
   // function_node
   flow::function_node<size_t, size_t, flow::queueing_lightweight> comp(graph, flow::serial,
     [&](const size_t &z) { return __atomic_add_fetch(&test_size, z, __ATOMIC_SEQ_CST); });
