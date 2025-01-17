@@ -15,10 +15,12 @@
 #include <oneapi/tbb/parallel_sort.h>
 
 constexpr size_t SVX = (2L << 4L);  // short vector elements 2^n [>= 2]
+static_assert(((SVX >= 2L) and not (SVX % 2L)));
 
 typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));  // short vector arithmetic type
 
 constexpr double MILLE = 1e6;  // trial_scale [>= SVX]
+static_assert((MILLE >= SVX));
 
 using namespace oneapi::tbb;
 
