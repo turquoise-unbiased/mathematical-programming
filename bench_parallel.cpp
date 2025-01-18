@@ -154,15 +154,15 @@ size_t trial::fn(const size_t N) {
       // svrng pointers
       svrngx_t* const rd_begin = (svrngx_t*)(&(*vec.begin));
       const svrngx_t* const rd_end = vec.sv_mod<svrngx_t>();  // SVRNG modulus
-      double* const vec_rd = vec.v_mod<svrngx_t>();  // vector modulus
+      double* const rd_rem = vec.v_mod<svrngx_t>();  // vector modulus
       // short vector pointers
       const svxdf_t* const sv_begin = (svxdf_t*)(&(*vec.begin));
       const svxdf_t* const sv_end = vec.sv_mod<svxdf_t>();  // short vector modulus
-      const double* const vec_sv = vec.v_mod<svxdf_t>();  // vector modulus
+      const double* const sv_rem = vec.v_mod<svxdf_t>();  // vector modulus
       // reducers
-      svxdf_t sv_sum = { 0e0 };  // short vector reducer
-      const double* const svs_0 = (double*)(&sv_sum);  // short vector reducer pointers
-      const double* const svs_f = (svs_0 + (sizeof(svxdf_t) / sizeof(double)));
+      svxdf_t sv_acc = { 0e0 };  // short vector reducer
+      const double* const sv_0 = (double*)(&sv_acc);  // short vector reducer pointers
+      const double* const sv_f = (sv_0 + (sizeof(svxdf_t) / sizeof(double)));
       // FUSION
       switch (fusion) {
         case FUSION::ON:
@@ -176,16 +176,16 @@ size_t trial::fn(const size_t N) {
         case FUSION::OFF:
           bench.push(tick_count::now());  // 1)
           for(svrngx_t* k = rd_begin; k < rd_end; ++k) { *k = rng.unifsvx(); }
-          for(double* k = vec_rd; k < vec.end; ++k) { *k = rng.unif(); }  // remainder
+          for(double* k = rd_rem; k < vec.end; ++k) { *k = rng.unif(); }  // remainder
           bench.push(tick_count::now());
 
           if(( rng_st = svrng_get_status() ) != SVRNG_STATUS_OK) { break; }
 
           // sum
           bench.push(tick_count::now());  // 2)
-          for(const svxdf_t* k = sv_begin; k < sv_end; ++k) { sv_sum += *k; }
-          for(const double* k = svs_0; k < svs_f; ++k) { v_sum += *k; }
-          for(const double* k = vec_sv; k < vec.end; ++k) { v_sum += *k; }  // remainder
+          for(const svxdf_t* k = sv_begin; k < sv_end; ++k) { sv_acc += *k; }
+          for(const double* k = sv_0; k < sv_f; ++k) { v_sum += *k; }
+          for(const double* k = sv_rem; k < vec.end; ++k) { v_sum += *k; }  // remainder
           bench.push(tick_count::now());
         break;
       }  // FUSION
