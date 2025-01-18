@@ -62,9 +62,6 @@ namespace tpl {
     #elif not (SVX % 2L)
       using svrngx_t = svrng_double2_t;
       svrngx_t unifsvx() const { return svrng_generate2_double(engine, distr); }
-    #else
-      using svrngx_t = double;
-      svrngx_t unifsvx() const { return svrng_generate_double(engine, distr); }
     #endif
   };
 
