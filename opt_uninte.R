@@ -8,19 +8,17 @@ assign("m", new("Sim"), envir = ( e.sim <- new.env() ))  # str class Sim
 
 parameters <- function() {
   nodes <- min((3L * m@k), .cc)
-  ikeys <- seq(from = 37L, by = 337L, length = nodes)
   cl <- parallel::makeForkCluster(nodes)                       # cluster of processes
   on.exit(parallel::stopCluster(cl))
-  parallel::clusterApply(cl, ikeys, function(r) set.seed(r))  # cycle of pseudo-random numbers
+  parallel::clusterSetRNGStream(cl, iseed = 37L)               # distribute CMRG streams
   parallel::parApply(cl, eval(m@A), c(2L, 3L), function(r) v.switch(r))      # parallel apply
 }
 
 simulate <- function(P) {
   nodes <- min((m@t ^ 3L * m@k), .cc)
-  ikeys <- seq(from = 59L, by = 157L, length = nodes)
   cl <- parallel::makeForkCluster(nodes)                 # cluster of processes
   on.exit(parallel::stopCluster(cl))
-  parallel::clusterApply(cl, ikeys, function(r) set.seed(r))  # cycle of pseudo-random numbers
+  parallel::clusterSetRNGStream(cl, iseed = 59L)         # distribute CMRG streams
   parallel::parApply(cl, P, c(1L, 3L), function(r) orbit(r))              # parallel apply
 }
 
