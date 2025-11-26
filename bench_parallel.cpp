@@ -147,14 +147,19 @@ int main() {
     [&](const size_t &z) { return __atomic_add_fetch(&test_size, z, __ATOMIC_SEQ_CST); });
   // edge
   flow::make_edge(fn, comp);
+  // diagnostic
+  tpl::bench bench;
+  bench.push(tick_count::now());  // c)
   // execute incoming message
-  for(size_t n = 0L; n < 1L; ++n) { fn.try_put(n); }
+  for(size_t n = 0L; n < 3L; ++n) { fn.try_put(n); }
   // block & catch & throw
   try { graph.wait_for_all(); }
   catch (...) { graph.cancel(); throw; }
+  bench.push(tick_count::now());
   // print info
   printf( "a) graph exception thrown:            %i\n", graph.exception_thrown()   );
   printf( "b) compound test size:                %zu\n", test_size                 );
+  printf( "c) compound test time:                %.6fs\n", bench.f1()              );
 
   return 0;
 }
