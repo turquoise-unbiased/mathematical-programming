@@ -26,9 +26,9 @@ setClass("Lab", contains  = c("Log", "Col"), sealed = T,
                                  b = "numeric",            # runif max
                                  t = "numeric",            # trials t ^ 3 * k
                                  k = "numeric"),           # score array dim 3
-                prototype = list(n = 1e+03,
+                prototype = list(n = 1e+04,
                                  a = 1e+03,
-                                 b = 1e+06,
+                                 b = 1e+07,
                                  t = 3L,
                                  k = 2L),
                 validity  = function(object) {})
