@@ -5,6 +5,7 @@ library("parallel")
 
 source("cls_uninte.R")
 assign("m", new("Sim"), envir = ( e.sim <- new.env() ))  # str class Sim
+attach(e.sim, pos = 2L)
 
 parameters <- function() {
   nodes <- min((3L * m@k), .cc)
@@ -22,9 +23,14 @@ simulate <- function(P) {
   parallel::parApply(cl, P, c(1L, 3L), function(r) orbit(r))              # parallel apply
 }
 
-attach(e.sim, pos = 2L)
-S <- aperm(simulate(parameters()), perm = c(2L, 1L, 3L))  # score array
+run <- function() {
+  S <- aperm(simulate(parameters()), perm = c(2L, 1L, 3L))  # score array
 
-colnames(S) <- m@col
-if (m@show) { for (i in seq(m@k)) { print(summary(S[,,i])) ; print(cor(S[,,i])) }}
-if (m@save) { write.csv(S, m@csv) }
+  colnames(S) <- m@col
+  if (m@show) { for (i in seq(m@k)) { print(summary(S[,,i])) ; print(cor(S[,,i])) }}
+  if (m@save) { write.csv(S, m@csv) }
+}
+
+##
+library("microbenchmark")
+microbenchmark(run(), unit = "secs", times = 1L)
