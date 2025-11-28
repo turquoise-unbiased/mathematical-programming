@@ -28,6 +28,7 @@ namespace trial {
   enum class FUSION { ON = 1, OFF };  // loop fusion constants
   size_t fn(const size_t N);
   size_t (*fnptr)(size_t) = fn;  // fn pointer
+  svrng_engine_t engine;  // for leap-frog method
 }  // end trial
 
 size_t trial::fn(const size_t N) {
@@ -37,7 +38,7 @@ size_t trial::fn(const size_t N) {
   // diagnostic
   tpl::bench bench;
   // random number generator
-  const tpl::RNG rng(trial_scale);
+  const tpl::RNG rng(engine, N, trial_scale);
   using svrngx_t = decltype(rng)::svrngx_t;
   int rng_st;  // RNG status
   // container vector, pointers, reducers
@@ -149,6 +150,8 @@ int main() {
     [&](const size_t &z) { return __atomic_add_fetch(&test_size, z, __ATOMIC_SEQ_CST); });
   // edge
   flow::make_edge(fn, comp);
+  // for leap-frog method
+  trial::engine = svrng_new_rand_engine(37u);
   // diagnostic
   tpl::bench bench;
   bench.push(tick_count::now());  // c)
@@ -158,6 +161,8 @@ int main() {
   try { graph.wait_for_all(); }
   catch (...) { graph.cancel(); throw; }
   bench.push(tick_count::now());
+  // for leap-frog method
+  svrng_delete_engine(trial::engine);
   // print info
   printf( "a) graph exception thrown:            %i\n", graph.exception_thrown()   );
   printf( "b) compound test size:                %zu\n", test_size                 );

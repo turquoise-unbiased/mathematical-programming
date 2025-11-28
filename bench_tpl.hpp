@@ -27,13 +27,13 @@ namespace tpl {
   };
 
   // RNG template class
-  template<unsigned S = 37u>
+  template<unsigned S = 25u>
   class RNG {
     const svrng_engine_t engine;
     const svrng_distribution_t distr;
   public:
-    RNG(const double r)
-      : engine( svrng_new_rand_engine(S) )
+    RNG(const svrng_engine_t orig_engine, const int k, const double r)
+      : engine( svrng_leapfrog_engine(svrng_copy_engine(orig_engine), k, S) )
       , distr( svrng_new_uniform_distribution_double(0e0, r) ) {}
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
