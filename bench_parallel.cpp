@@ -37,7 +37,7 @@ size_t trial::fn(const size_t N) {
   // diagnostic
   tpl::bench bench;
   // random number generator
-  const tpl::RNG rng(trial_scale);
+  const tpl::RNG rng(N, trial_scale);
   using svrngx_t = decltype(rng)::svrngx_t;
   int rng_st;  // RNG status
   // container vector, pointers, reducers

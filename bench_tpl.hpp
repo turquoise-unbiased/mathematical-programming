@@ -23,13 +23,14 @@ namespace tpl {
   };
 
   // RNG template class
-  template<unsigned S = 37u>
+  template<unsigned S = 10u>  // <= init_key.size + 1
   class RNG {
+    const unsigned init_key[9u] = {37u, 41u, 43u, 47u, 53u, 59u, 61u, 67u, 71u};
     const svrng_engine_t engine;
     const svrng_distribution_t distr;
   public:
-    RNG(const double r)
-      : engine( svrng_new_mt19937_engine(S) )
+    RNG(const int k, const double r)
+      : engine( svrng_new_mt19937_engine_ex((k%S), (unsigned*)(&init_key)) )
       , distr( svrng_new_uniform_distribution_double(0e0, r) ) {}
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
