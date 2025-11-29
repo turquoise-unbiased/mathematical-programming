@@ -33,7 +33,7 @@ namespace tpl {
     const svrng_distribution_t distr;
   public:
     RNG(const double r)
-      : engine( svrng_new_rand_engine(S) )
+      : engine( svrng_new_mt19937_engine(S) )
       , distr( svrng_new_uniform_distribution_double(0e0, r) ) {}
     ~RNG() { svrng_delete_distribution(distr);
              svrng_delete_engine(engine); }
