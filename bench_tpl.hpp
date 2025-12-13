@@ -2,7 +2,8 @@
    benchmark parallel algorithms and short vectors using double precision floating-point values
    [icpx 2025.0.1]
 */
-#include <svrng.h>
+#include <math.h>
+#include "SFMT.h"  // https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/SFMT/index.html [1.5.1]
 
 #include <oneapi/tbb/scalable_allocator.h>
 #include <oneapi/tbb/concurrent_queue.h>
@@ -12,6 +13,13 @@ using namespace oneapi::tbb;
 
 // tpl namespace
 namespace tpl {
+  constexpr size_t SVX = (2L << 8L);  // short vector elements 2^n [>= (SFMT_MEXP / 128 + 1) * 2]
+  static_assert(((SVX >= 2L) and not (SVX&(SVX-1L))));
+  // short vector RNG types
+  typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));
+  typedef unsigned long svxdu_t __attribute__ ((vector_size ((SVX * sizeof(unsigned long)))));
+  static_assert((sizeof(svxdf_t) == sizeof(svxdu_t)));  // for union
+
   // benchmark template class
   template<typename T = tick_count, typename Q = concurrent_queue<T>>
   class bench {
@@ -23,34 +31,21 @@ namespace tpl {
   };
 
   // RNG template class
-  template<unsigned S = 37u>
+  template<unsigned S = 10u>  // <= init_key.size + 1
   class RNG {
-    const svrng_engine_t engine;
-    const svrng_distribution_t distr;
+    sfmt_t* const sfmt = new sfmt_t;  // SFMT internal state
+    const double R;
+    const unsigned init_key[9u] = {37u, 41u, 43u, 47u, 53u, 59u, 61u, 67u, 71u};
   public:
-    RNG(const double r)
-      : engine( svrng_new_rand_engine(S) )
-      , distr( svrng_new_uniform_distribution_double(0e0, r) ) {}
-    ~RNG() { svrng_delete_distribution(distr);
-             svrng_delete_engine(engine); }
-    double unif() const { return svrng_generate_double(engine, distr); }  // proxy with private
-    // proxy with private
-    #if not (SVX % 32L)
-      using svrngx_t = svrng_double32_t;
-      svrngx_t unifsvx() const { return svrng_generate32_double(engine, distr); }
-    #elif not (SVX % 16L)
-      using svrngx_t = svrng_double16_t;
-      svrngx_t unifsvx() const { return svrng_generate16_double(engine, distr); }
-    #elif not (SVX % 8L)
-      using svrngx_t = svrng_double8_t;
-      svrngx_t unifsvx() const { return svrng_generate8_double(engine, distr); }
-    #elif not (SVX % 4L)
-      using svrngx_t = svrng_double4_t;
-      svrngx_t unifsvx() const { return svrng_generate4_double(engine, distr); }
-    #elif not (SVX % 2L)
-      using svrngx_t = svrng_double2_t;
-      svrngx_t unifsvx() const { return svrng_generate2_double(engine, distr); }
-    #endif
+    RNG(const int k, const double r)
+      : R( scalbln(r, -(53L)) )
+      { sfmt_init_by_array(sfmt, (unsigned*)(&init_key), (k%S)); }
+    ~RNG() { delete sfmt; }
+    double unif() const { return ((sfmt_genrand_uint64(sfmt) >> 11L) * R); }  // 53-bit resolution * r
+    using svrngx_t = svxdf_t;
+    void unifsvx(svrngx_t* const vf) const {
+      sfmt_fill_array64(sfmt, (unsigned long*)vf, SVX);
+      *vf = (__builtin_convertvector((*((svxdu_t*)vf) >> 11L), svxdf_t) * R); }  // 53-bit resolution * r
   };
 
   // vector implementation template class
