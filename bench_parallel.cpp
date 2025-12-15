@@ -23,6 +23,10 @@ static_assert((MILLE >= SVX));
 #include "bench_tpl.hpp"  // integral benchmark templates
 static_assert((MILLE >= tpl::SVX));
 
+#include "bench_q.hpp"  // diagnostic
+
+using namespace oneapi::tbb;
+
 // trial namespace
 namespace trial {
   enum class FUSION { ON = 1, OFF };  // loop fusion constants

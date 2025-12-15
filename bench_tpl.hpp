@@ -5,11 +5,6 @@
 #include <math.h>
 #include "SFMT.h"  // https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/SFMT/index.html [1.5.1]
 
-#include <oneapi/tbb/concurrent_queue.h>
-#include <oneapi/tbb/tick_count.h>
-
-using namespace oneapi::tbb;
-
 // tpl namespace
 namespace tpl {
   constexpr size_t SVX = (2L << 8L);  // short vector elements 2^n [>= (SFMT_MEXP / 128 + 1) * 2]
@@ -18,16 +13,6 @@ namespace tpl {
   typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));
   typedef unsigned long svxdu_t __attribute__ ((vector_size ((SVX * sizeof(unsigned long)))));
   static_assert((sizeof(svxdf_t) == sizeof(svxdu_t)));  // for union
-
-  // benchmark template class
-  template<typename T = tick_count, typename Q = concurrent_queue<T>>
-  class bench {
-    Q q;
-  public:
-    virtual void push(const T t) { q.push(t); }  // proxy with private
-    virtual const double f1() { T t0, t1;
-      return ((int(q.try_pop(t0)) & int(q.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); }  // time span
-  };
 
   // RNG template class
   template<unsigned S = 10u>  // <= init_key.size + 1
