@@ -25,7 +25,6 @@ static_assert((MILLE >= tpl::SVX));
 
 // trial namespace
 namespace trial {
-  const int STATUS_OK = TBBMALLOC_OK;  // constructors ok  [bench_tpl::RNG|vector]
   enum class FUSION { ON = 1, OFF };  // loop fusion constants
   size_t fn(const size_t N);
   size_t (*fnptr)(size_t) = fn;  // fn pointer
@@ -44,8 +43,6 @@ size_t trial::fn(const size_t N) {
   const tpl::vector<double> vec(trial_size);
   double v_mean, v_median, v_mad, v_sum = 0e0;  // stats
   // double for each
-  switch ( vec.st ) {
-    case STATUS_OK:
       // svrng pointers
       svrngx_t* const rd_begin = (svrngx_t*)(&(*vec.begin));
       const svrngx_t* const rd_end = vec.sv_mod<svrngx_t>();  // SVRNG modulus
@@ -78,11 +75,7 @@ size_t trial::fn(const size_t N) {
           bench.push(tick_count::now());
         break;
       }  // FUSION
-    break;
-  }  // STATUS
   // mean, median, mad
-  switch ( vec.st ) {
-    case STATUS_OK:
       v_mean = tpl::mean(v_sum, vec.size);
 
       bench.push(tick_count::now());  // 3)
@@ -122,11 +115,7 @@ size_t trial::fn(const size_t N) {
       printf( "c) Machine epsilon (fff):             %Le\n", LDBL_EPSILON                    );
       printf( "d) Machine rounds style:              %i\n",  FLT_ROUNDS                      );
       printf( "e) x87 FPU exception flags:           %i\n\n", fetestexcept(FE_ALL_EXCEPT)    );
-    break;
-    default:
-      printf( "APP FAILED: tbb: %i\n", vec.st );
-    return 0L;
-  }  // STATUS
+
   return trial_size;
 }  // trial::fn
 

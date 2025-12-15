@@ -5,7 +5,6 @@
 #include <math.h>
 #include "SFMT.h"  // https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/SFMT/index.html [1.5.1]
 
-#include <oneapi/tbb/scalable_allocator.h>
 #include <oneapi/tbb/concurrent_queue.h>
 #include <oneapi/tbb/tick_count.h>
 
@@ -51,20 +50,18 @@ namespace tpl {
   // vector implementation template class
   template<typename T>
   class vector {
-    void* const ptr;  // continuous virtual memory' address
+    T* const ptr;  // continuous virtual memory' address
   public:
     const size_t size;  // vector size
     T* const begin;   // vector pointer begin
     T* const end;     // vector pointer end
-    const int st;  // vec status
 
     vector(const size_t r)
-      : ptr( scalable_calloc(r, sizeof(T)) )
+      : ptr( new T[r] { 0e0 } )
       , size( r )
       , begin( (T*)ptr )
-      , end( (begin + size) )
-      , st( (ptr ? TBBMALLOC_OK : TBBMALLOC_NO_EFFECT) ) {}
-    ~vector() { scalable_free(ptr); }
+      , end( (begin + size) ) {}
+    ~vector() { delete [] ptr; }
 
     template<typename Q>
     const size_t rem() const { return (size % (sizeof(Q) / sizeof(T))); }  // reminder
