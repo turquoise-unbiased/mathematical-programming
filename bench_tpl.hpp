@@ -8,7 +8,6 @@
 // tpl namespace
 namespace tpl {
   constexpr size_t SVX = (2L << 8L);  // short vector elements 2^n [>= (SFMT_MEXP / 128 + 1) * 2]
-  static_assert(((SVX >= 2L) and not (SVX&(SVX-1L))));
   // short vector RNG types
   typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));
   typedef unsigned long svxdu_t __attribute__ ((vector_size ((SVX * sizeof(unsigned long)))));

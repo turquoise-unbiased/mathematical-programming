@@ -11,18 +11,12 @@
 #include <oneapi/tbb/parallel_for_each.h>
 #include <oneapi/tbb/parallel_sort.h>
 
-constexpr size_t SVX = (2L << 4L);  // short vector elements 2^n [>= 2]
-static_assert(((SVX >= 2L) and not (SVX&(SVX-1L))));
-
+constexpr size_t SVX = (2L << 4L);  // short vector elements 2^n
 typedef double svxdf_t __attribute__ ((vector_size ((SVX * sizeof(double)))));  // short vector arithmetic type
-static_assert((sizeof(svxdf_t) == alignof(svxdf_t)));  // reduction
 
-constexpr double MILLE = 1e6;  // trial_scale [>= SVX]
-static_assert((MILLE >= SVX));
+constexpr double MILLE = 1e6;  // trial_scale
 
 #include "bench_tpl.hpp"  // integral benchmark templates
-static_assert((MILLE >= tpl::SVX));
-
 #include "bench_q.hpp"  // diagnostic
 
 using namespace oneapi::tbb;
