@@ -51,20 +51,14 @@ namespace tpl {
     const size_t rem() const { return (size % (sizeof(Q) / sizeof(T))); }  // reminder
 
     template<typename Q>
-    T* v_mod() const { return (end - rem<Q>()); }  // vector modulus
+    T* v_mod() const { return (end - rem<Q>()); }  // vector modulus T*
 
-    // union modulus template function
+    // union modulus Q*
     template<typename Q>
     const Q* sv_mod() const {
       const size_t rem = this->rem<Q>();
       const Q* const end = (Q*)(&(*this->end));
-      switch (rem) {
-        case 0L: return end;
-        default:
-          switch ((sizeof(Q) ^ sizeof(T))) {
-            case 0L: return (end - rem);
-            default: return (end - 1L);
-    }}}
+      return ( ((not rem) or (sizeof(Q)==sizeof(T))) ? (end-rem) : (end-1L) ); }
   };
 
   // median of sorted vector template function
