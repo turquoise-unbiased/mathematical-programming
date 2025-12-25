@@ -15,6 +15,6 @@ namespace tpl {
   public:
     virtual void push(const T t) { q.push(t); }  // proxy with private
     virtual const double f1() { T t0, t1;
-      return ((int(q.try_pop(t0)) & int(q.try_pop(t1))) ? (t1-t0).seconds() : -(0e0)); }  // time span
+      return ( (q.try_pop(t0) and q.try_pop(t1)) ? (t1-t0).seconds() : -(0e0) ); }  // time span
   };
 }  // end tpl
