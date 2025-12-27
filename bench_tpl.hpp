@@ -45,6 +45,11 @@ namespace tpl {
       , size( r )
       , begin( (T*)ptr )
       , end( (begin + size) ) {}
+    vector(T* const vec, const size_t r)  // facade
+      : ptr( NULL )
+      , size( r )
+      , begin( (T*)vec )
+      , end( (begin + size) ) {}
     ~vector() { delete [] ptr; }
 
     template<typename Q>
