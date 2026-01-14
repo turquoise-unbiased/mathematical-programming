@@ -39,7 +39,7 @@ size_t trial::fn(const size_t N) {
   using svrngx_t = decltype(rng)::svrngx_t;
   // container vector, pointers, reducers
   const tpl::vector<double> vec(trial_size);
-  double v_mean, v_median, v_mad, v_sum = 0e0;  // stats
+  double v_sum = 0e0;
   // double for each
       // svrng pointers
       svrngx_t* const rd_begin = (svrngx_t*)(&(*vec.begin));
@@ -74,13 +74,13 @@ size_t trial::fn(const size_t N) {
         break;
       }  // FUSION
   // mean, median, mad
-      v_mean = tpl::mean(v_sum, vec.size);
+      const double v_mean = tpl::mean(v_sum, vec.size);
 
       bench.push(tick_count::now());  // 3)
       parallel_sort(vec.begin, vec.end);
       bench.push(tick_count::now());
 
-      v_median = tpl::median(vec.begin, vec.end, vec.size);
+      const double v_median = tpl::median(vec.begin, vec.end, vec.size);
 
       bench.push(tick_count::now());  // 4)
       parallel_for_each(vec.begin, vec.end, [&](auto &elem) { elem = fabs((elem - v_median)); });
@@ -90,7 +90,7 @@ size_t trial::fn(const size_t N) {
       parallel_sort(vec.begin, vec.end);
       bench.push(tick_count::now());
 
-      v_mad = tpl::median(vec.begin, vec.end, vec.size);
+      const double v_mad = tpl::median(vec.begin, vec.end, vec.size);
 
       // print stats
       printf( "%zu) trial size:                        %zu doubles\n", N, vec.size           );
