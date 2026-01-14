@@ -123,7 +123,7 @@ int main() {
   flow::graph graph;
   // function_node
   flow::function_node<size_t, size_t, flow::queueing> fn(graph, flow::unlimited,  // flow::serial
-    [&](const size_t &n) { return trial::fnptr(n); });
+    [](const size_t &n) { return trial::fnptr(n); });
   // function_node
   flow::function_node<size_t, size_t, flow::queueing_lightweight> comp(graph, flow::serial,
     [&](const size_t &z) { return __atomic_add_fetch(&test_size, z, __ATOMIC_SEQ_CST); });
