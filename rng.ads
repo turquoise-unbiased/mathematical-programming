@@ -15,9 +15,12 @@ package rng with
    Pure,
    SPARK_Mode is
 
+   --  generic type
+   type rd64 is mod 2 ** 64 with Size => 64;
+
    --  rdrand
    generic
-      type rx is mod <>;
+      type rx is mod <> or use rd64;
    function rand return rx with
       Pre     => (rx'Size in 64 | 32 | 16),  --  type check
       Post    => (rand'Result /= 0),  --  value check
@@ -25,7 +28,7 @@ package rng with
 
    --  rdseed
    generic
-      type sx is mod <>;
+      type sx is mod <> or use rd64;
    function seed return sx with
       Pre     => (sx'Size in 64 | 32 | 16),  --  type check
       Post    => (seed'Result /= 0),  --  value check
