@@ -22,7 +22,7 @@ is
   generic
     type rx is mod <> or use rd64;
   function rand return rx with
-    Pre => rx'Size in 64 | 32 | 16,  -- type check
+    Pre => rx'Size in 64 | 32 | 16 and then rx'Modulus = 2 ** rx'Size,  -- type check
     Post => rand'Result /= 0,  -- value check
     Global => null;  -- global aspect
 
@@ -30,7 +30,7 @@ is
   generic
     type sx is mod <> or use rd64;
   function seed return sx with
-    Pre => sx'Size in 64 | 32 | 16,  -- type check
+    Pre => sx'Size in 64 | 32 | 16 and then sx'Modulus = 2 ** sx'Size,  -- type check
     Post => seed'Result /= 0,  -- value check
     Global => null;  -- global aspect
 
