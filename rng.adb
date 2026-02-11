@@ -9,7 +9,9 @@ with System.Machine_Code;  -- Assembler
 package body rng with
   SPARK_Mode => Off
 is
-  RL : constant Positive := 2;  -- retry limit
+  -- retry limit
+  subtype rlim is Positive range 1 .. 10;
+  RL : constant rlim := 2;
   use ASCII;  -- LF HT
 
   function rand return rx is
@@ -25,7 +27,7 @@ is
                    "cmovncl %%ecx, %%eax" & LF & HT &
                    "2:",
        Outputs  => rx'Asm_Output ("=a", r),
-       Inputs   => Positive'Asm_Input ("n", RL),
+       Inputs   => rlim'Asm_Input ("n", RL),
        Clobber  => "rcx, cc",
        Volatile => True);
     return r;
@@ -44,7 +46,7 @@ is
                    "cmovncl %%ecx, %%eax" & LF & HT &
                    "2:",
        Outputs  => sx'Asm_Output ("=a", r),
-       Inputs   => Positive'Asm_Input ("n", RL),
+       Inputs   => rlim'Asm_Input ("n", RL),
        Clobber  => "rcx, cc",
        Volatile => True);
     return r;
