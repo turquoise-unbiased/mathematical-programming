@@ -7,14 +7,14 @@ with System.Machine_Code;  -- Assembler
 
 -- RDRAND RDSEED
 package body rng with
-  SPARK_Mode => Off
+  SPARK_Mode
 is
   -- retry limit
   subtype rlim is Positive range 1 .. 10;
   RL : constant rlim := 2;
   use ASCII;  -- LF HT
 
-  function rand return rx is
+  function rand return rx with SPARK_Mode => Off is
     r : rx;  -- return value
   begin
     System.Machine_Code.Asm  -- x86 att
@@ -33,7 +33,7 @@ is
     return r;
   end rand;
 
-  function seed return sx is
+  function seed return sx with SPARK_Mode => Off is
     r : sx;  -- return value
   begin
     System.Machine_Code.Asm  -- x86 att
