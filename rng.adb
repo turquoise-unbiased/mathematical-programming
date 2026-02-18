@@ -15,41 +15,41 @@ is
   use ASCII;  -- LF HT
 
   function rand return rx with SPARK_Mode => Off is
-    r : rx;  -- return value
   begin
-    System.Machine_Code.Asm  -- x86 att
-      (Template => "xorl %%eax, %%eax"    & LF & HT &
-                   "movl %1, %%ecx"       & LF & HT &
-                   "1:"                   & LF & HT &
-                   "rdrand %0"            & LF & HT &
-                   "jc 2f"                & LF & HT &
-                   "loop 1b"              & LF & HT &
-                   "cmovncl %%ecx, %%eax" & LF & HT &
-                   "2:",
-       Outputs  => rx'Asm_Output ("=a", r),
-       Inputs   => rlim'Asm_Input ("n", RL),
-       Clobber  => "rcx, cc",
-       Volatile => True);
-    return r;
+    return r : rx do  -- return value
+      System.Machine_Code.Asm  -- x86 att
+        (Template => "xorl %%eax, %%eax"    & LF & HT &
+                     "movl %1, %%ecx"       & LF & HT &
+                     "1:"                   & LF & HT &
+                     "rdrand %0"            & LF & HT &
+                     "jc 2f"                & LF & HT &
+                     "loop 1b"              & LF & HT &
+                     "cmovncl %%ecx, %%eax" & LF & HT &
+                     "2:",
+         Outputs  => rx'Asm_Output ("=a", r),
+         Inputs   => rlim'Asm_Input ("n", RL),
+         Clobber  => "rcx, cc",
+         Volatile => True);
+    end return;
   end rand;
 
   function seed return sx with SPARK_Mode => Off is
-    r : sx;  -- return value
   begin
-    System.Machine_Code.Asm  -- x86 att
-      (Template => "xorl %%eax, %%eax"    & LF & HT &
-                   "movl %1, %%ecx"       & LF & HT &
-                   "1:"                   & LF & HT &
-                   "rdseed %0"            & LF & HT &
-                   "jc 2f"                & LF & HT &
-                   "loop 1b"              & LF & HT &
-                   "cmovncl %%ecx, %%eax" & LF & HT &
-                   "2:",
-       Outputs  => sx'Asm_Output ("=a", r),
-       Inputs   => rlim'Asm_Input ("n", RL),
-       Clobber  => "rcx, cc",
-       Volatile => True);
-    return r;
+    return r : sx do  -- return value
+      System.Machine_Code.Asm  -- x86 att
+        (Template => "xorl %%eax, %%eax"    & LF & HT &
+                     "movl %1, %%ecx"       & LF & HT &
+                     "1:"                   & LF & HT &
+                     "rdseed %0"            & LF & HT &
+                     "jc 2f"                & LF & HT &
+                     "loop 1b"              & LF & HT &
+                     "cmovncl %%ecx, %%eax" & LF & HT &
+                     "2:",
+         Outputs  => sx'Asm_Output ("=a", r),
+         Inputs   => rlim'Asm_Input ("n", RL),
+         Clobber  => "rcx, cc",
+         Volatile => True);
+    end return;
   end seed;
 
 end rng;
