@@ -10,13 +10,13 @@ package body rng with
   SPARK_Mode
 is
   -- retry limit
-  subtype rlim is Positive range 1 .. 10;
-  RL : constant rlim := 2;
+  subtype s_lim is Positive range 1 .. 10;
+  RL : constant s_lim := 2;
   use ASCII;  -- LF HT
 
-  function rand return rx with SPARK_Mode => Off is
+  function rand return t_mx with SPARK_Mode => Off is
   begin
-    return r : rx do  -- return value
+    return r : t_mx do  -- return value
       System.Machine_Code.Asm  -- x86 att
         (Template => "xorl %%eax, %%eax"    & LF & HT &
                      "movl %1, %%ecx"       & LF & HT &
@@ -26,16 +26,16 @@ is
                      "loop 1b"              & LF & HT &
                      "cmovncl %%ecx, %%eax" & LF & HT &
                      "2:",
-         Outputs  => rx'Asm_Output ("=a", r),
-         Inputs   => rlim'Asm_Input ("n", RL),
+         Outputs  => t_mx'Asm_Output ("=a", r),
+         Inputs   => s_lim'Asm_Input ("n", RL),
          Clobber  => "rcx, cc",
          Volatile => True);
     end return;
   end rand;
 
-  function seed return sx with SPARK_Mode => Off is
+  function seed return t_mx with SPARK_Mode => Off is
   begin
-    return r : sx do  -- return value
+    return r : t_mx do  -- return value
       System.Machine_Code.Asm  -- x86 att
         (Template => "xorl %%eax, %%eax"    & LF & HT &
                      "movl %1, %%ecx"       & LF & HT &
@@ -45,8 +45,8 @@ is
                      "loop 1b"              & LF & HT &
                      "cmovncl %%ecx, %%eax" & LF & HT &
                      "2:",
-         Outputs  => sx'Asm_Output ("=a", r),
-         Inputs   => rlim'Asm_Input ("n", RL),
+         Outputs  => t_mx'Asm_Output ("=a", r),
+         Inputs   => s_lim'Asm_Input ("n", RL),
          Clobber  => "rcx, cc",
          Volatile => True);
     end return;

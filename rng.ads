@@ -16,21 +16,21 @@ package rng with
   SPARK_Mode
 is
   -- generic type
-  type rd64 is mod 2 ** 64 with Size => 64;
+  type t_m64 is mod 2 ** 64 with Size => 64;
 
   -- rdrand
   generic
-    type rx is mod <> or use rd64;
-  function rand return rx with
-    Pre => rx'Size in 64 | 32 | 16 and then rx'Modulus = 2 ** rx'Size,  -- type check
+    type t_mx is mod <> or use t_m64;
+  function rand return t_mx with
+    Pre => t_mx'Size in 64 | 32 | 16 and then t_mx'Modulus = 2 ** t_mx'Size,  -- type check
     Post => rand'Result /= 0,  -- value check
     Global => null;  -- global aspect
 
   -- rdseed
   generic
-    type sx is mod <> or use rd64;
-  function seed return sx with
-    Pre => sx'Size in 64 | 32 | 16 and then sx'Modulus = 2 ** sx'Size,  -- type check
+    type t_mx is mod <> or use t_m64;
+  function seed return t_mx with
+    Pre => t_mx'Size in 64 | 32 | 16 and then t_mx'Modulus = 2 ** t_mx'Size,  -- type check
     Post => seed'Result /= 0,  -- value check
     Global => null;  -- global aspect
 
