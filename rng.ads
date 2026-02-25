@@ -17,10 +17,11 @@ package rng with
 is
   -- generic type
   type t_m64 is mod 2 ** 64 with Size => 64;
+  subtype s_modular is t_m64;
 
   -- rdrand
   generic
-    type t_mx is mod <> or use t_m64;
+    type t_mx is mod <> or use s_modular;
   function rand return t_mx with
     Pre => t_mx'Size in 64 | 32 | 16 and then t_mx'Modulus = 2 ** t_mx'Size,  -- type check
     Post => rand'Result /= 0,  -- value check
@@ -28,7 +29,7 @@ is
 
   -- rdseed
   generic
-    type t_mx is mod <> or use t_m64;
+    type t_mx is mod <> or use s_modular;
   function seed return t_mx with
     Pre => t_mx'Size in 64 | 32 | 16 and then t_mx'Modulus = 2 ** t_mx'Size,  -- type check
     Post => seed'Result /= 0,  -- value check
